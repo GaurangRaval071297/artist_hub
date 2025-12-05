@@ -1,11 +1,12 @@
+import 'dart:convert';
 import 'dart:io';
-
 import 'package:artist_hub/Constants/api_urls.dart';
 import 'package:artist_hub/Screen/Auth/Login.dart';
 import 'package:artist_hub/Services/api_services.dart';
 import 'package:flutter/material.dart';
 import 'package:artist_hub/Constants/app_colors.dart';
 import 'package:image_picker/image_picker.dart';
+import '../../Models/register_model.dart';
 import '../../Widgets/Common Textfields/common_textfields.dart';
 
 class Register extends StatefulWidget {
@@ -24,6 +25,8 @@ class _RegisterState extends State<Register> {
   TextEditingController address_Controller = TextEditingController();
   String selectedRole = "Customer";
   List<String> roles = ["Customer", "Artist"];
+
+  final List<RegisterModel> _register = [];
 
   bool _password = true;
   bool _confirmPassword = true;
@@ -48,23 +51,23 @@ class _RegisterState extends State<Register> {
 
   void validateFields() {
     if (name_Controller.text.isEmpty) {
-      showAlert("Please enter name");
+      showAlert("Please Enter Name");
     } else if (email_Controller.text.isEmpty) {
-      showAlert("Please enter email");
+      showAlert("Please Enter Email");
     } else if (password_Controller.text.isEmpty) {
-      showAlert("Please enter password");
+      showAlert("Please Enter Password");
     } else if (confmPassword_Controller.text.isEmpty) {
-      showAlert("Please enter confirm password");
+      showAlert("Please Enter Confirm Password");
     } else if (password_Controller.text != confmPassword_Controller.text) {
-      showAlert("Password & Confirm Password do not match");
+      showAlert("Password & Confirm Password Do Not Match");
     } else if (phone_Controller.text.isEmpty) {
-      showAlert("Please enter mobile number");
+      showAlert("Please Enter Mobile Number");
     } else if (address_Controller.text.isEmpty) {
-      showAlert("Please enter address");
+      showAlert("Please Enter Address");
     } else if (selectedRole.isEmpty) {
-      showAlert("Please select role");
+      showAlert("Please Eelect Role");
     } else if (selectedImage == null) {
-      showAlert("Please select image");
+      showAlert("Please Select Image");
     } else if (selectedImage != null) {
       registerUser();
     }
@@ -93,24 +96,21 @@ class _RegisterState extends State<Register> {
       );
 
       print(response);
+      RegisterModel registerModel = RegisterModel.fromJson(response);
+      print(registerModel.status);
+      print(registerModel.message);
 
-      if (response.containsKey("status")) {
-        if (response["status"] == "success") {
-          showAlert("Registration Successful");
-          Future.delayed(Duration(seconds: 2), () {
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(builder: (context) => Login()),
-            );
-          });
-        } else if (response["status"] == "error" &&
-            response["message"].toString().contains("email")) {
-          showAlert("Email is already registered");
-        } else {
-          showAlert(response["message"].toString());
-        }
+      if (registerModel.status == true) {
+        showAlert("Registration Successful");
+
+        Future.delayed(Duration(seconds: 2), () {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => Login()),
+          );
+        });
       } else {
-        showAlert("Unexpected error occurred");
+        showAlert(registerModel.message ?? "Something went wrong");
       }
     } catch (e) {
       showAlert("Registration failed. Please try again.");
