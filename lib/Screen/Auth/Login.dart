@@ -1,9 +1,11 @@
 import 'package:artist_hub/Constants/api_urls.dart';
 import 'package:artist_hub/Constants/app_colors.dart';
 import 'package:artist_hub/Screen/Auth/Register.dart';
+import 'package:artist_hub/Screen/Dashboard/Dashboard.dart';
 import 'package:artist_hub/Services/api_services.dart';
 import 'package:artist_hub/Widgets/Common%20Textfields/common_textfields.dart';
 import 'package:flutter/material.dart';
+
 // 10.240.82.105
 class Login extends StatefulWidget {
   const Login({super.key});
@@ -43,14 +45,14 @@ class _LoginState extends State<Login> {
     );
   }
 
-  void validateLogin() {
+  void validateLogin() async {
     if (email.text.isEmpty) {
       showAlert("Please enter email");
     } else if (password.text.isEmpty) {
       showAlert("Please enter password");
     } else {
       // Add your login API call here
-      loginUser();
+      await loginUser();
     }
   }
 
@@ -59,10 +61,7 @@ class _LoginState extends State<Login> {
       _isLoading = true;
     });
 
-    Map<String, String> data = {
-      "email": email.text.trim(),
-      "password": password.text,
-    };
+    Map<String, String> data = {"email": email.text, "password": password.text};
 
     try {
       var response = await ApiServices.postApi(ApiUrls.loginUrl, data);
@@ -71,13 +70,27 @@ class _LoginState extends State<Login> {
         _isLoading = false;
       });
 
-      showAlert(response["message"].toString());
+      if (response["status"] == true) {
+        // On Success
+        showAlert("Login Successful");
 
+        // OPTIONAL: Save user data
+        // SharedPreferences prefs = await SharedPreferences.getInstance();
+        // await prefs.setString("user_id", response["data"]["user_id"].toString());
+        
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => Dashboard()),
+        );
+      } else {
+        showAlert(response["message"] ?? "Login failed");
+      }
     } catch (e) {
       setState(() {
         _isLoading = false;
       });
-      showAlert("Login failed. Please try again.");
+      showAlert("Something went wrong");
+      print("Login Error: $e");
     }
   }
 
@@ -295,7 +308,6 @@ class _LoginState extends State<Login> {
 
                         SizedBox(height: 20),
 
-                        // Register Link
                         Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [

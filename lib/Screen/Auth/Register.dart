@@ -112,7 +112,6 @@ class _RegisterState extends State<Register> {
       RegisterModel registerModel = RegisterModel.fromJson(response);
 
       if (registerModel.status == true) {
-        // Check if artist_id is properly set
         if (registerModel.user?.role == "artist") {
           if (registerModel.user?.artistId != null && registerModel.user?.artistId != 0) {
             showAlert("Artist Registration Successful!\nArtist ID: ${registerModel.user?.artistId}");
@@ -123,7 +122,6 @@ class _RegisterState extends State<Register> {
           showAlert("Registration Successful!");
         }
 
-        // Navigate to login after successful registration
         Future.delayed(Duration(seconds: 2), () {
           Navigator.pushReplacement(
             context,

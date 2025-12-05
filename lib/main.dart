@@ -1,6 +1,6 @@
+import 'package:artist_hub/Screen/Splash%20Screen/splash_screen.dart';
 import 'package:flutter/material.dart';
-import 'Screen/Auth/Login.dart';
 
 void main() {
-  runApp(MaterialApp(home: Login(),debugShowCheckedModeBanner: false,));
+  runApp(MaterialApp(home: SplashScreen(),debugShowCheckedModeBanner: false,));
 }
