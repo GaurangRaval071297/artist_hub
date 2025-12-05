@@ -98,7 +98,7 @@ class _LoginState extends State<Login> {
                 Colors.white,
                 Colors.white,
               ],
-              stops: [0, 0.3, 0.3, 1],
+              //stops: [0, 0.3, 0.3, 1],
             ),
           ),
           child: SingleChildScrollView(

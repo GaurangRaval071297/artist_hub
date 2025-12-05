@@ -23,7 +23,10 @@ class _RegisterState extends State<Register> {
   TextEditingController confmPassword_Controller = TextEditingController();
   TextEditingController phone_Controller = TextEditingController();
   TextEditingController address_Controller = TextEditingController();
-  String selectedRole = "Customer";
+
+  // Store both display value and API value
+  String selectedRoleDisplay = "Customer";
+  String selectedRoleApi = "customer"; // Default lowercase for API
   List<String> roles = ["Customer", "Artist"];
 
   final List<RegisterModel> _register = [];
@@ -54,21 +57,27 @@ class _RegisterState extends State<Register> {
       showAlert("Please Enter Name");
     } else if (email_Controller.text.isEmpty) {
       showAlert("Please Enter Email");
+    } else if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(email_Controller.text)) {
+      showAlert("Please Enter Valid Email");
     } else if (password_Controller.text.isEmpty) {
       showAlert("Please Enter Password");
+    } else if (password_Controller.text.length < 6) {
+      showAlert("Password must be at least 6 characters");
     } else if (confmPassword_Controller.text.isEmpty) {
       showAlert("Please Enter Confirm Password");
     } else if (password_Controller.text != confmPassword_Controller.text) {
       showAlert("Password & Confirm Password Do Not Match");
     } else if (phone_Controller.text.isEmpty) {
       showAlert("Please Enter Mobile Number");
+    } else if (!RegExp(r'^[0-9]{10}$').hasMatch(phone_Controller.text)) {
+      showAlert("Please Enter Valid 10-digit Phone Number");
     } else if (address_Controller.text.isEmpty) {
       showAlert("Please Enter Address");
-    } else if (selectedRole.isEmpty) {
-      showAlert("Please Eelect Role");
+    } else if (selectedRoleDisplay.isEmpty) {
+      showAlert("Please Select Role");
     } else if (selectedImage == null) {
-      showAlert("Please Select Image");
-    } else if (selectedImage != null) {
+      showAlert("Please Select Profile Image");
+    } else {
       registerUser();
     }
   }
@@ -79,13 +88,16 @@ class _RegisterState extends State<Register> {
     });
 
     Map<String, String> data = {
-      "name": name_Controller.text,
-      "email": email_Controller.text,
+      "name": name_Controller.text.trim(),
+      "email": email_Controller.text.trim(),
       "password": password_Controller.text,
-      "phone": phone_Controller.text,
-      "address": address_Controller.text,
-      "role": selectedRole,
+      "phone": phone_Controller.text.trim(),
+      "address": address_Controller.text.trim(),
+      "role": selectedRoleApi, // Send lowercase role
     };
+
+    print("Sending registration data:");
+    print("Role sent to API: $selectedRoleApi");
 
     try {
       var response = await ApiServices.multipartApi(
@@ -95,14 +107,23 @@ class _RegisterState extends State<Register> {
         fileField: "profile_pic",
       );
 
-      print(response);
+      print("API Response: ${json.encode(response)}");
+
       RegisterModel registerModel = RegisterModel.fromJson(response);
-      print(registerModel.status);
-      print(registerModel.message);
 
       if (registerModel.status == true) {
-        showAlert("Registration Successful");
+        // Check if artist_id is properly set
+        if (registerModel.user?.role == "artist") {
+          if (registerModel.user?.artistId != null && registerModel.user?.artistId != 0) {
+            showAlert("Artist Registration Successful!\nArtist ID: ${registerModel.user?.artistId}");
+          } else {
+            showAlert("Artist Registration Successful!\nNote: Artist ID will be assigned.");
+          }
+        } else {
+          showAlert("Registration Successful!");
+        }
 
+        // Navigate to login after successful registration
         Future.delayed(Duration(seconds: 2), () {
           Navigator.pushReplacement(
             context,
@@ -110,10 +131,11 @@ class _RegisterState extends State<Register> {
           );
         });
       } else {
-        showAlert(registerModel.message ?? "Something went wrong");
+        showAlert(registerModel.message ?? "Registration failed. Please try again.");
       }
     } catch (e) {
-      showAlert("Registration failed. Please try again.");
+      print("Registration Error: $e");
+      showAlert("Registration failed. Please check your internet connection and try again.");
     } finally {
       setState(() {
         _isLoading = false;
@@ -130,19 +152,19 @@ class _RegisterState extends State<Register> {
           child: Wrap(
             children: [
               ListTile(
-                leading: Icon(Icons.camera_alt),
+                leading: Icon(Icons.camera_alt, color: AppColors.primaryColor),
                 title: Text("Camera"),
                 onTap: () {
-                  pickImage(ImageSource.camera);
                   Navigator.pop(context);
+                  pickImage(ImageSource.camera);
                 },
               ),
               ListTile(
-                leading: Icon(Icons.photo),
+                leading: Icon(Icons.photo, color: AppColors.primaryColor),
                 title: Text("Gallery"),
                 onTap: () {
-                  pickImage(ImageSource.gallery);
                   Navigator.pop(context);
+                  pickImage(ImageSource.gallery);
                 },
               ),
             ],
@@ -153,11 +175,21 @@ class _RegisterState extends State<Register> {
   }
 
   void pickImage(ImageSource source) async {
-    final picked = await ImagePicker().pickImage(source: source);
-    if (picked != null) {
-      setState(() {
-        selectedImage = File(picked.path);
-      });
+    try {
+      final picked = await ImagePicker().pickImage(
+        source: source,
+        maxWidth: 800,
+        maxHeight: 800,
+        imageQuality: 85,
+      );
+
+      if (picked != null) {
+        setState(() {
+          selectedImage = File(picked.path);
+        });
+      }
+    } catch (e) {
+      showAlert("Failed to pick image: $e");
     }
   }
 
@@ -240,14 +272,16 @@ class _RegisterState extends State<Register> {
                               child: ClipOval(
                                 child: selectedImage != null
                                     ? Image.file(
-                                        selectedImage!,
-                                        fit: BoxFit.cover,
-                                      )
+                                  selectedImage!,
+                                  fit: BoxFit.cover,
+                                  width: 100,
+                                  height: 100,
+                                )
                                     : Icon(
-                                        Icons.person,
-                                        size: 50,
-                                        color: Colors.grey[500],
-                                      ),
+                                  Icons.person,
+                                  size: 50,
+                                  color: Colors.grey[500],
+                                ),
                               ),
                             ),
                             Positioned(
@@ -273,12 +307,15 @@ class _RegisterState extends State<Register> {
                         ),
                         SizedBox(height: 5),
                         Text(
-                          "Add Profile Photo",
-                          style: TextStyle(color: Colors.grey[600]),
+                          "Add Profile Photo (Required)",
+                          style: TextStyle(
+                            color: Colors.grey[600],
+                            fontSize: 12,
+                          ),
                         ),
                         SizedBox(height: 30),
 
-                        // Form Fields
+                        // Form Fields Container
                         Container(
                           decoration: BoxDecoration(
                             color: Colors.grey[50],
@@ -373,7 +410,7 @@ class _RegisterState extends State<Register> {
                                   keyboardType: TextInputType.phone,
                                   maxLength: 10,
                                   controller: phone_Controller,
-                                  hintText: 'Phone Number',
+                                  hintText: 'Phone Number (10 digits)',
                                   inputAction: TextInputAction.next,
                                   preFixIcon: Icon(
                                     Icons.phone_outlined,
@@ -404,12 +441,10 @@ class _RegisterState extends State<Register> {
                                     borderRadius: BorderRadius.circular(8),
                                   ),
                                   child: Padding(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 12,
-                                    ),
+                                    padding: const EdgeInsets.symmetric(horizontal: 12),
                                     child: DropdownButtonHideUnderline(
                                       child: DropdownButton<String>(
-                                        value: selectedRole,
+                                        value: selectedRoleDisplay,
                                         isExpanded: true,
                                         icon: Icon(
                                           Icons.arrow_drop_down,
@@ -423,7 +458,11 @@ class _RegisterState extends State<Register> {
                                         }).toList(),
                                         onChanged: (value) {
                                           setState(() {
-                                            selectedRole = value!;
+                                            selectedRoleDisplay = value!;
+                                            // Convert to lowercase for API
+                                            selectedRoleApi = value.toLowerCase();
+                                            print("Selected role (display): $selectedRoleDisplay");
+                                            print("Selected role (API): $selectedRoleApi");
                                           });
                                         },
                                       ),
@@ -452,23 +491,23 @@ class _RegisterState extends State<Register> {
                             ),
                             child: _isLoading
                                 ? SizedBox(
-                                    height: 20,
-                                    width: 20,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                      valueColor: AlwaysStoppedAnimation<Color>(
-                                        Colors.white,
-                                      ),
-                                    ),
-                                  )
+                              height: 20,
+                              width: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                  Colors.white,
+                                ),
+                              ),
+                            )
                                 : Text(
-                                    'Create Account',
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
+                              'Create Account',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
                           ),
                         ),
 
