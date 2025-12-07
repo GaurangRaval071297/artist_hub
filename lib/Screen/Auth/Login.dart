@@ -74,10 +74,6 @@ class _LoginState extends State<Login> {
         // On Success
         showAlert("Login Successful");
 
-        // OPTIONAL: Save user data
-        // SharedPreferences prefs = await SharedPreferences.getInstance();
-        // await prefs.setString("user_id", response["data"]["user_id"].toString());
-        
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (context) => Dashboard()),

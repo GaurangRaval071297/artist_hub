@@ -408,7 +408,7 @@ class _RegisterState extends State<Register> {
                                   keyboardType: TextInputType.phone,
                                   maxLength: 10,
                                   controller: phone_Controller,
-                                  hintText: 'Phone Number (10 digits)',
+                                  hintText: 'Phone Number',
                                   inputAction: TextInputAction.next,
                                   preFixIcon: Icon(
                                     Icons.phone_outlined,

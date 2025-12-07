@@ -12,6 +12,8 @@ class CommonTextfields extends StatelessWidget {
   final Widget? preFixIcon;
   final Widget? sufFixIcon;
   final TextInputAction? inputAction;
+  final int? maxLines;
+  final int? minLines;
 
   const CommonTextfields({
     super.key,
@@ -26,6 +28,8 @@ class CommonTextfields extends StatelessWidget {
     this.sufFixIcon,
     this.onTap,
     this.inputAction,
+    this.maxLines,
+    this.minLines
   });
 
   @override

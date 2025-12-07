@@ -1,6 +1,9 @@
 import 'package:artist_hub/Screen/Auth/Login.dart';
 import 'package:flutter/material.dart';
 import 'dart:async';
+import 'package:connectivity_plus/connectivity_plus.dart';
+
+import '../Connection/connectivity_screen.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -10,17 +13,37 @@ class SplashScreen extends StatefulWidget {
 }
 
 class _SplashScreenState extends State<SplashScreen> {
+  bool _isConnected = true;
+
   @override
   void initState() {
     super.initState();
-    // Navigate to login screen after 2 seconds
-    Timer(
-      const Duration(seconds: 2),
-      () => Navigator.push(
-        context,
-        MaterialPageRoute(builder: (context) => Login()),
-      ),
-    );
+    _checkInternetAndNavigate();
+  }
+
+  Future<void> _checkInternetAndNavigate() async {
+    // Wait for 2 seconds for splash animation
+    await Future.delayed(const Duration(seconds: 2));
+
+    // Check internet connectivity
+    final connectivityResult = await Connectivity().checkConnectivity();
+
+    if (mounted) {
+      if (connectivityResult.contains(ConnectivityResult.mobile) ||
+          connectivityResult.contains(ConnectivityResult.wifi)) {
+        // Internet is available, go to Login
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => Login()),
+        );
+      } else {
+        // No internet, show connectivity error screen
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => ConnectivityErrorScreen()),
+        );
+      }
+    }
   }
 
   @override
@@ -41,6 +64,13 @@ class _SplashScreenState extends State<SplashScreen> {
                   decoration: BoxDecoration(
                     color: Colors.deepPurple[50],
                     borderRadius: BorderRadius.circular(30),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.deepPurple.withOpacity(0.2),
+                        blurRadius: 20,
+                        spreadRadius: 5,
+                      ),
+                    ],
                   ),
                   child: const Icon(
                     Icons.palette,
@@ -78,9 +108,21 @@ class _SplashScreenState extends State<SplashScreen> {
 
                 const SizedBox(height: 50),
 
-                // Loading indicator
-                const CircularProgressIndicator(
-                  valueColor: AlwaysStoppedAnimation<Color>(Colors.deepPurple),
+                // Loading indicator with connectivity status
+                Column(
+                  children: [
+                    const CircularProgressIndicator(
+                      valueColor: AlwaysStoppedAnimation<Color>(Colors.deepPurple),
+                    ),
+                    const SizedBox(height: 15),
+                    Text(
+                      'Checking connection...',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                  ],
                 ),
 
                 const SizedBox(height: 20),
@@ -94,9 +136,9 @@ class _SplashScreenState extends State<SplashScreen> {
             ),
           ),
 
-          // Created by text at the bottom - Positioned works inside Stack
+          // Created by text at the bottom
           Positioned(
-            bottom: 30,
+            bottom: 50,
             left: 0,
             right: 0,
             child: Center(
