@@ -1,10 +1,15 @@
 import 'package:artist_hub/Constants/api_urls.dart';
 import 'package:artist_hub/Constants/app_colors.dart';
 import 'package:artist_hub/Screen/Auth/Register.dart';
-import 'package:artist_hub/Screen/Dashboard/Dashboard.dart';
 import 'package:artist_hub/Services/api_services.dart';
 import 'package:artist_hub/Widgets/Common%20Textfields/common_textfields.dart';
 import 'package:flutter/material.dart';
+import 'package:gradient_borders/box_borders/gradient_box_border.dart';
+
+import '../../Models/register_model.dart';
+import '../Dashboard/Artist Dashboard/artist_dashboard.dart';
+import '../Dashboard/Customer Dashboard/customer dashboard.dart';
+import '../Shared Preference/shared_pref.dart';
 
 // 10.240.82.105
 class Login extends StatefulWidget {
@@ -51,7 +56,6 @@ class _LoginState extends State<Login> {
     } else if (password.text.isEmpty) {
       showAlert("Please enter password");
     } else {
-      // Add your login API call here
       await loginUser();
     }
   }
@@ -71,13 +75,41 @@ class _LoginState extends State<Login> {
       });
 
       if (response["status"] == true) {
-        // On Success
-        showAlert("Login Successful");
+        // Parse the response using your RegisterModel
+        var registerModel = RegisterModel.fromJson(response);
 
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => Dashboard()),
-        );
+        if (registerModel.user != null) {
+          // Save user data to SharedPreferences
+          await SharedPreferencesService.saveUserData({
+            'id': registerModel.user!.userId?.toString() ?? '',
+            'name': registerModel.user!.name ?? '',
+            'email': registerModel.user!.email ?? '',
+            'role': registerModel.user!.role ?? 'customer',
+            'phone': registerModel.user!.phone ?? '',
+            'address': registerModel.user!.address ?? '',
+            'profile_pic': registerModel.user!.profilePic ?? '',
+            'artist_id': registerModel.user!.artistId?.toString() ?? '',
+          });
+
+          // Check user role and navigate accordingly
+          String userRole = registerModel.user!.role?.toLowerCase() ?? 'customer';
+
+          showAlert("Login Successful");
+
+          if (userRole == 'artist') {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => ArtistDashboard()),
+            );
+          } else {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => CustomerDashboard()),
+            );
+          }
+        } else {
+          showAlert("User data not found");
+        }
       } else {
         showAlert(response["message"] ?? "Login failed");
       }
@@ -99,17 +131,13 @@ class _LoginState extends State<Login> {
           height: double.infinity,
           decoration: BoxDecoration(
             gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
               colors: [
-                AppColors.primaryColor.withOpacity(0.9),
-                AppColors.primaryColor.withOpacity(0.7),
-                Colors.white,
-                Colors.white,
+                AppColors.appBarGradient.colors[0].withOpacity(0.9),
+                AppColors.appBarGradient.colors[1].withOpacity(0.7),
               ],
-              //stops: [0, 0.3, 0.3, 1],
             ),
           ),
+
           child: SingleChildScrollView(
             child: Column(
               children: [
@@ -169,15 +197,21 @@ class _LoginState extends State<Login> {
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
                             color: Colors.grey[100],
-                            border: Border.all(
-                              color: AppColors.primaryColor,
-                              width: 2,
+                            border: GradientBoxBorder(
+                              gradient: LinearGradient(
+                                colors: [
+                                  AppColors.appBarGradient.colors[0]
+                                      .withOpacity(0.9),
+                                  AppColors.appBarGradient.colors[1]
+                                      .withOpacity(0.7),
+                                ],
+                              ),
                             ),
                           ),
                           child: Icon(
                             Icons.person,
                             size: 50,
-                            color: AppColors.primaryColor,
+                            color: AppColors.grey600,
                           ),
                         ),
                         SizedBox(height: 5),
@@ -212,7 +246,7 @@ class _LoginState extends State<Login> {
                                   inputAction: TextInputAction.next,
                                   preFixIcon: Icon(
                                     Icons.email_outlined,
-                                    color: AppColors.primaryColor,
+                                    color: AppColors.grey600,
                                   ),
                                 ),
                                 SizedBox(height: 15),
@@ -226,7 +260,7 @@ class _LoginState extends State<Login> {
                                   inputAction: TextInputAction.done,
                                   preFixIcon: Icon(
                                     Icons.lock_outline,
-                                    color: AppColors.primaryColor,
+                                    color: AppColors.grey600,
                                   ),
                                   sufFixIcon: IconButton(
                                     icon: Icon(
@@ -268,17 +302,31 @@ class _LoginState extends State<Login> {
                         SizedBox(height: 30),
 
                         // Login Button
-                        SizedBox(
-                          width: double.infinity,
+                        Container(
                           height: 50,
+                          width: .infinity,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(25),
+                            gradient: LinearGradient(
+                              colors: [
+                                AppColors.appBarGradient.colors[0].withOpacity(
+                                  0.9,
+                                ),
+                                AppColors.appBarGradient.colors[1].withOpacity(
+                                  0.7,
+                                ),
+                              ],
+                            ),
+                          ),
                           child: ElevatedButton(
                             onPressed: _isLoading ? null : validateLogin,
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: AppColors.primaryColor,
+                              backgroundColor: Colors.transparent,
+                              shadowColor: Colors.transparent,
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(25),
                               ),
-                              elevation: 3,
+                              elevation: 0,
                             ),
                             child: _isLoading
                                 ? SizedBox(
@@ -308,23 +356,43 @@ class _LoginState extends State<Login> {
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Text(
-                              "Don't have an account? ",
+                              "Already have an account? ",
                               style: TextStyle(color: Colors.grey[600]),
                             ),
-                            GestureDetector(
-                              onTap: () {
-                                Navigator.pushReplacement(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) => Register(),
+                            ShaderMask(
+                              blendMode: BlendMode.srcIn,
+                              shaderCallback: (bounds) {
+                                return LinearGradient(
+                                  colors: [
+                                    AppColors.appBarGradient.colors[0]
+                                        .withOpacity(0.9),
+                                    AppColors.appBarGradient.colors[1]
+                                        .withOpacity(0.7),
+                                  ],
+                                ).createShader(
+                                  Rect.fromLTWH(
+                                    0,
+                                    0,
+                                    bounds.width,
+                                    bounds.height,
                                   ),
                                 );
                               },
-                              child: Text(
-                                "Register Now",
-                                style: TextStyle(
-                                  color: AppColors.primaryColor,
-                                  fontWeight: FontWeight.bold,
+                              child: GestureDetector(
+                                onTap: () {
+                                  Navigator.pushReplacement(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => Register(),
+                                    ),
+                                  );
+                                },
+                                child: Text(
+                                  'Register',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white,
+                                  ),
                                 ),
                               ),
                             ),

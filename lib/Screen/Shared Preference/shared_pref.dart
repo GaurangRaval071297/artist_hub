@@ -1,130 +1,327 @@
 import 'package:shared_preferences/shared_preferences.dart';
 
-class SharedPreferencesHelper {
-  static late SharedPreferences _prefs;
+class SharedPreferencesService {
+  static const String _isLoggedInKey = 'isLoggedIn';
+  static const String _userIdKey = 'userId';
+  static const String _userNameKey = 'userName';
+  static const String _userEmailKey = 'userEmail';
+  static const String _userRoleKey = 'userRole';
+  static const String _userTokenKey = 'userToken';
+  static const String _userProfilePicKey = 'userProfilePic';
+  static const String _userPhoneKey = 'userPhone';
+  static const String _userAddressKey = 'userAddress';
+  static const String _rememberMeKey = 'rememberMe';
+
+  static SharedPreferences? _preferences;
+  static bool _isInitialized = false;
 
   // Initialize SharedPreferences
   static Future<void> init() async {
-    _prefs = await SharedPreferences.getInstance();
+    _preferences = await SharedPreferences.getInstance();
+    _isInitialized = true;
   }
 
-  // ================ SETTERS ================
-
-  // Save user ID
-  static Future<bool> setUserId(String userId) async {
-    return await _prefs.setString('userId', userId);
+  // Helper method to get preferences with null check
+  static SharedPreferences _getPrefs() {
+    if (!_isInitialized || _preferences == null) {
+      throw Exception('SharedPreferences not initialized. Call init() first.');
+    }
+    return _preferences!;
   }
 
-  // Save user email
-  static Future<bool> setUserEmail(String email) async {
-    return await _prefs.setString('userEmail', email);
+  // =============== Getter to check if initialized ===============
+  static bool get isInitialized => _isInitialized;
+
+  // =============== Login Status ===============
+  static Future<void> setLoggedIn(bool value) async {
+    await _getPrefs().setBool(_isLoggedInKey, value);
   }
 
-  // Save user name
-  static Future<bool> setUserName(String name) async {
-    return await _prefs.setString('userName', name);
-  }
-
-  // Save token (for authentication)
-  static Future<bool> setToken(String token) async {
-    return await _prefs.setString('token', token);
-  }
-
-  // Save login status
-  static Future<bool> setLoginStatus(bool isLoggedIn) async {
-    return await _prefs.setBool('isLoggedIn', isLoggedIn);
-  }
-
-  // Save user data as JSON string
-  static Future<bool> setUserData(String userData) async {
-    return await _prefs.setString('userData', userData);
-  }
-
-  // Save any custom value
-  static Future<bool> setValue(String key, dynamic value) async {
-    if (value is String) {
-      return await _prefs.setString(key, value);
-    } else if (value is int) {
-      return await _prefs.setInt(key, value);
-    } else if (value is double) {
-      return await _prefs.setDouble(key, value);
-    } else if (value is bool) {
-      return await _prefs.setBool(key, value);
-    } else if (value is List<String>) {
-      return await _prefs.setStringList(key, value);
-    } else {
+  static bool isLoggedIn() {
+    try {
+      return _getPrefs().getBool(_isLoggedInKey) ?? false;
+    } catch (e) {
+      print('Error checking login status: $e');
       return false;
     }
   }
 
-  // ================ GETTERS ================
-
-  // Get user ID
-  static String? getUserId() {
-    return _prefs.getString('userId');
+  // =============== User ID ===============
+  static Future<void> setUserId(String userId) async {
+    await _getPrefs().setString(_userIdKey, userId);
   }
 
-  // Get user email
-  static String? getUserEmail() {
-    return _prefs.getString('userEmail');
+  static String getUserId() {
+    try {
+      return _getPrefs().getString(_userIdKey) ?? '';
+    } catch (e) {
+      print('Error getting user ID: $e');
+      return '';
+    }
   }
 
-  // Get user name
-  static String? getUserName() {
-    return _prefs.getString('userName');
+  // =============== User Name ===============
+  static Future<void> setUserName(String userName) async {
+    await _getPrefs().setString(_userNameKey, userName);
   }
 
-  // Get token
-  static String? getToken() {
-    return _prefs.getString('token');
+  static String getUserName() {
+    try {
+      return _getPrefs().getString(_userNameKey) ?? '';
+    } catch (e) {
+      print('Error getting user name: $e');
+      return '';
+    }
   }
 
-  // Get login status
-  static bool getLoginStatus() {
-    return _prefs.getBool('isLoggedIn') ?? false;
+  // =============== User Email ===============
+  static Future<void> setUserEmail(String userEmail) async {
+    await _getPrefs().setString(_userEmailKey, userEmail);
   }
 
-  // Get user data
-  static String? getUserData() {
-    return _prefs.getString('userData');
+  static String getUserEmail() {
+    try {
+      return _getPrefs().getString(_userEmailKey) ?? '';
+    } catch (e) {
+      print('Error getting user email: $e');
+      return '';
+    }
   }
 
-  // Get any value
-  static dynamic getValue(String key) {
-    return _prefs.get(key);
+  // =============== User Role ===============
+  static Future<void> setUserRole(String userRole) async {
+    await _getPrefs().setString(_userRoleKey, userRole);
   }
 
-  // ================ REMOVE/CLEAR ================
-
-  // Remove specific key
-  static Future<bool> removeKey(String key) async {
-    return await _prefs.remove(key);
+  static String getUserRole() {
+    try {
+      return _getPrefs().getString(_userRoleKey) ?? 'customer';
+    } catch (e) {
+      print('Error getting user role: $e');
+      return 'customer';
+    }
   }
 
-  // Clear all data (logout)
-  static Future<bool> clearAll() async {
-    return await _prefs.clear();
+  // =============== User Token ===============
+  static Future<void> setUserToken(String token) async {
+    await _getPrefs().setString(_userTokenKey, token);
   }
 
-  // Clear only user data but keep settings
-  static Future<void> clearUserData() async {
-    await _prefs.remove('userId');
-    await _prefs.remove('userEmail');
-    await _prefs.remove('userName');
-    await _prefs.remove('token');
-    await _prefs.remove('isLoggedIn');
-    await _prefs.remove('userData');
+  static String getUserToken() {
+    try {
+      return _getPrefs().getString(_userTokenKey) ?? '';
+    } catch (e) {
+      print('Error getting user token: $e');
+      return '';
+    }
   }
 
-  // ================ CHECKERS ================
-
-  // Check if user is logged in
-  static bool isUserLoggedIn() {
-    return getLoginStatus() && getToken() != null;
+  // =============== User Profile Pic ===============
+  static Future<void> setUserProfilePic(String profilePic) async {
+    await _getPrefs().setString(_userProfilePicKey, profilePic);
   }
 
-  // Check if key exists
-  static bool containsKey(String key) {
-    return _prefs.containsKey(key);
+  static String getUserProfilePic() {
+    try {
+      return _getPrefs().getString(_userProfilePicKey) ?? '';
+    } catch (e) {
+      print('Error getting user profile pic: $e');
+      return '';
+    }
+  }
+
+  // =============== User Phone ===============
+  static Future<void> setUserPhone(String phone) async {
+    await _getPrefs().setString(_userPhoneKey, phone);
+  }
+
+  static String getUserPhone() {
+    try {
+      return _getPrefs().getString(_userPhoneKey) ?? '';
+    } catch (e) {
+      print('Error getting user phone: $e');
+      return '';
+    }
+  }
+
+  // =============== User Address ===============
+  static Future<void> setUserAddress(String address) async {
+    await _getPrefs().setString(_userAddressKey, address);
+  }
+
+  static String getUserAddress() {
+    try {
+      return _getPrefs().getString(_userAddressKey) ?? '';
+    } catch (e) {
+      print('Error getting user address: $e');
+      return '';
+    }
+  }
+
+  // =============== Remember Me ===============
+  static Future<void> setRememberMe(bool value) async {
+    await _getPrefs().setBool(_rememberMeKey, value);
+  }
+
+  static bool getRememberMe() {
+    try {
+      return _getPrefs().getBool(_rememberMeKey) ?? false;
+    } catch (e) {
+      print('Error getting remember me: $e');
+      return false;
+    }
+  }
+
+  // =============== Save All User Data ===============
+  static Future<void> saveUserData(Map<String, dynamic> userData) async {
+    try {
+      if (userData['id'] != null) {
+        await setUserId(userData['id'].toString());
+      }
+      if (userData['name'] != null) {
+        await setUserName(userData['name'].toString());
+      }
+      if (userData['email'] != null) {
+        await setUserEmail(userData['email'].toString());
+      }
+      if (userData['role'] != null) {
+        await setUserRole(userData['role'].toString().toLowerCase());
+      }
+      if (userData['token'] != null) {
+        await setUserToken(userData['token'].toString());
+      }
+      if (userData['profile_pic'] != null || userData['profilePic'] != null) {
+        await setUserProfilePic(
+            userData['profile_pic']?.toString() ??
+                userData['profilePic']?.toString() ?? ''
+        );
+      }
+      if (userData['phone'] != null) {
+        await setUserPhone(userData['phone'].toString());
+      }
+      if (userData['address'] != null) {
+        await setUserAddress(userData['address'].toString());
+      }
+
+      await setLoggedIn(true);
+    } catch (e) {
+      print('Error saving user data: $e');
+    }
+  }
+
+  // =============== Get All User Data ===============
+  static Map<String, dynamic> getUserData() {
+    try {
+      return {
+        'id': getUserId(),
+        'name': getUserName(),
+        'email': getUserEmail(),
+        'role': getUserRole(),
+        'token': getUserToken(),
+        'profile_pic': getUserProfilePic(),
+        'phone': getUserPhone(),
+        'address': getUserAddress(),
+        'isLoggedIn': isLoggedIn(),
+      };
+    } catch (e) {
+      print('Error getting user data: $e');
+      return {};
+    }
+  }
+
+  // =============== LOGOUT METHODS ===============
+
+  // Method 1: Clear all data completely
+  static Future<void> clearAllData() async {
+    try {
+      await _getPrefs().clear();
+      _isInitialized = false;
+      _preferences = null;
+      print('All user data cleared from SharedPreferences');
+    } catch (e) {
+      print('Error clearing all data: $e');
+    }
+  }
+
+  // Method 2: Clear only login-related data (preserves settings)
+  static Future<void> logout() async {
+    try {
+      // Clear only authentication-related data
+      await _getPrefs().remove(_isLoggedInKey);
+      await _getPrefs().remove(_userIdKey);
+      await _getPrefs().remove(_userNameKey);
+      await _getPrefs().remove(_userEmailKey);
+      await _getPrefs().remove(_userRoleKey);
+      await _getPrefs().remove(_userTokenKey);
+      await _getPrefs().remove(_userProfilePicKey);
+      await _getPrefs().remove(_userPhoneKey);
+      await _getPrefs().remove(_userAddressKey);
+
+      // Optionally clear remember me
+      await _getPrefs().remove(_rememberMeKey);
+
+      print('User logged out successfully');
+    } catch (e) {
+      print('Error during logout: $e');
+    }
+  }
+
+  // Method 3: Logout but keep remember me email
+  static Future<void> logoutKeepEmail() async {
+    try {
+      String savedEmail = getUserEmail();
+      bool rememberMe = getRememberMe();
+
+      // Clear all data first
+      await clearAllData();
+
+      // Restore email if remember me was enabled
+      if (rememberMe && savedEmail.isNotEmpty) {
+        await _getPrefs().setString(_userEmailKey, savedEmail);
+        await _getPrefs().setBool(_rememberMeKey, true);
+      }
+
+      print('Logged out - email preserved: $rememberMe');
+    } catch (e) {
+      print('Error during logout with email preservation: $e');
+    }
+  }
+
+  // Method 4: Check if user can auto-login
+  static bool canAutoLogin() {
+    try {
+      return isLoggedIn() && getUserId().isNotEmpty;
+    } catch (e) {
+      print('Error checking auto login: $e');
+      return false;
+    }
+  }
+
+  // =============== Check Specific Values ===============
+  static bool hasData() {
+    try {
+      return getUserId().isNotEmpty;
+    } catch (e) {
+      print('Error checking data: $e');
+      return false;
+    }
+  }
+
+  // =============== Debug Methods ===============
+  static void printAllData() {
+    try {
+      print('=== SharedPreferences Data ===');
+      print('isLoggedIn: ${isLoggedIn()}');
+      print('userId: ${getUserId()}');
+      print('userName: ${getUserName()}');
+      print('userEmail: ${getUserEmail()}');
+      print('userRole: ${getUserRole()}');
+      print('hasToken: ${getUserToken().isNotEmpty}');
+      print('hasProfilePic: ${getUserProfilePic().isNotEmpty}');
+      print('rememberMe: ${getRememberMe()}');
+      print('=============================');
+    } catch (e) {
+      print('Error printing data: $e');
+    }
   }
 }

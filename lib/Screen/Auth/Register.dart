@@ -5,6 +5,7 @@ import 'package:artist_hub/Screen/Auth/Login.dart';
 import 'package:artist_hub/Services/api_services.dart';
 import 'package:flutter/material.dart';
 import 'package:artist_hub/Constants/app_colors.dart';
+import 'package:gradient_borders/box_borders/gradient_box_border.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../Models/register_model.dart';
 import '../../Widgets/Common Textfields/common_textfields.dart';
@@ -57,7 +58,9 @@ class _RegisterState extends State<Register> {
       showAlert("Please Enter Name");
     } else if (email_Controller.text.isEmpty) {
       showAlert("Please Enter Email");
-    } else if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(email_Controller.text)) {
+    } else if (!RegExp(
+      r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
+    ).hasMatch(email_Controller.text)) {
       showAlert("Please Enter Valid Email");
     } else if (password_Controller.text.isEmpty) {
       showAlert("Please Enter Password");
@@ -113,10 +116,15 @@ class _RegisterState extends State<Register> {
 
       if (registerModel.status == true) {
         if (registerModel.user?.role == "artist") {
-          if (registerModel.user?.artistId != null && registerModel.user?.artistId != 0) {
-            showAlert("Artist Registration Successful!\nArtist ID: ${registerModel.user?.artistId}");
+          if (registerModel.user?.artistId != null &&
+              registerModel.user?.artistId != 0) {
+            showAlert(
+              "Artist Registration Successful!\nArtist ID: ${registerModel.user?.artistId}",
+            );
           } else {
-            showAlert("Artist Registration Successful!\nNote: Artist ID will be assigned.");
+            showAlert(
+              "Artist Registration Successful!\nNote: Artist ID will be assigned.",
+            );
           }
         } else {
           showAlert("Registration Successful!");
@@ -129,11 +137,15 @@ class _RegisterState extends State<Register> {
           );
         });
       } else {
-        showAlert(registerModel.message ?? "Registration failed. Please try again.");
+        showAlert(
+          registerModel.message ?? "Registration failed. Please try again.",
+        );
       }
     } catch (e) {
       print("Registration Error: $e");
-      showAlert("Registration failed. Please check your internet connection and try again.");
+      showAlert(
+        "Registration failed. Please check your internet connection and try again.",
+      );
     } finally {
       setState(() {
         _isLoading = false;
@@ -150,7 +162,16 @@ class _RegisterState extends State<Register> {
           child: Wrap(
             children: [
               ListTile(
-                leading: Icon(Icons.camera_alt, color: AppColors.primaryColor),
+                leading: ShaderMask(
+                  shaderCallback: (Rect bounds) {
+                    return LinearGradient(
+                      colors: AppColors.appBarGradient.colors,
+                      begin: Alignment.centerLeft,
+                      end: Alignment.centerRight,
+                    ).createShader(bounds);
+                  },
+                  child: Icon(Icons.camera_alt, color: Colors.white),
+                ),
                 title: Text("Camera"),
                 onTap: () {
                   Navigator.pop(context);
@@ -158,7 +179,16 @@ class _RegisterState extends State<Register> {
                 },
               ),
               ListTile(
-                leading: Icon(Icons.photo, color: AppColors.primaryColor),
+                leading: ShaderMask(
+                  shaderCallback: (Rect bounds) {
+                    return LinearGradient(
+                      colors: AppColors.appBarGradient.colors,
+                      begin: Alignment.centerLeft,
+                      end: Alignment.centerRight,
+                    ).createShader(bounds);
+                  },
+                  child: Icon(Icons.photo, color: Colors.white),
+                ),
                 title: Text("Gallery"),
                 onTap: () {
                   Navigator.pop(context);
@@ -200,11 +230,9 @@ class _RegisterState extends State<Register> {
           height: double.infinity,
           decoration: BoxDecoration(
             gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
               colors: [
-                AppColors.primaryColor,
-                AppColors.primaryColor.withOpacity(0.8),
+                AppColors.appBarGradient.colors[0].withOpacity(0.9),
+                AppColors.appBarGradient.colors[1].withOpacity(0.7),
               ],
             ),
           ),
@@ -262,24 +290,30 @@ class _RegisterState extends State<Register> {
                               decoration: BoxDecoration(
                                 shape: BoxShape.circle,
                                 color: Colors.grey[200],
-                                border: Border.all(
-                                  color: AppColors.primaryColor,
+                                border: GradientBoxBorder(
+                                  gradient: LinearGradient(
+                                    colors: [
+                                      AppColors.appBarGradient.colors[0].withOpacity(0.9),
+                                      AppColors.appBarGradient.colors[1].withOpacity(0.7),
+                                    ],
+                                  ),
+                                  //color: AppColors.primaryColor,
                                   width: 2,
                                 ),
                               ),
                               child: ClipOval(
                                 child: selectedImage != null
                                     ? Image.file(
-                                  selectedImage!,
-                                  fit: BoxFit.cover,
-                                  width: 100,
-                                  height: 100,
-                                )
+                                        selectedImage!,
+                                        fit: BoxFit.cover,
+                                        width: 100,
+                                        height: 100,
+                                      )
                                     : Icon(
-                                  Icons.person,
-                                  size: 50,
-                                  color: Colors.grey[500],
-                                ),
+                                        Icons.person,
+                                        size: 50,
+                                        color: Colors.grey[500],
+                                      ),
                               ),
                             ),
                             Positioned(
@@ -291,7 +325,13 @@ class _RegisterState extends State<Register> {
                                   padding: const EdgeInsets.all(8),
                                   decoration: BoxDecoration(
                                     shape: BoxShape.circle,
-                                    color: AppColors.primaryColor,
+                                    gradient: LinearGradient(
+                                      colors: [
+                                        AppColors.appBarGradient.colors[0].withOpacity(0.9),
+                                        AppColors.appBarGradient.colors[1].withOpacity(0.7),
+                                      ],
+                                    ),
+                                    //color: AppColors.primaryColor,
                                   ),
                                   child: Icon(
                                     Icons.camera_alt,
@@ -348,7 +388,7 @@ class _RegisterState extends State<Register> {
                                   inputAction: TextInputAction.next,
                                   preFixIcon: Icon(
                                     Icons.email_outlined,
-                                    color: Colors.grey[600],
+                                    color: AppColors.grey600,
                                   ),
                                 ),
                                 SizedBox(height: 15),
@@ -362,14 +402,14 @@ class _RegisterState extends State<Register> {
                                   inputAction: TextInputAction.next,
                                   preFixIcon: Icon(
                                     Icons.lock_outline,
-                                    color: Colors.grey[600],
+                                    color: AppColors.grey600,
                                   ),
                                   sufFixIcon: IconButton(
                                     icon: Icon(
                                       _password
                                           ? Icons.visibility_off
                                           : Icons.visibility,
-                                      color: Colors.grey[600],
+                                      color: AppColors.grey600,
                                     ),
                                     onPressed: () => setState(() {
                                       _password = !_password;
@@ -387,14 +427,14 @@ class _RegisterState extends State<Register> {
                                   inputAction: TextInputAction.next,
                                   preFixIcon: Icon(
                                     Icons.lock_outline,
-                                    color: Colors.grey[600],
+                                    color: AppColors.grey600,
                                   ),
                                   sufFixIcon: IconButton(
                                     icon: Icon(
                                       _confirmPassword
                                           ? Icons.visibility_off
                                           : Icons.visibility,
-                                      color: Colors.grey[600],
+                                      color: AppColors.grey600,
                                     ),
                                     onPressed: () => setState(() {
                                       _confirmPassword = !_confirmPassword;
@@ -412,7 +452,7 @@ class _RegisterState extends State<Register> {
                                   inputAction: TextInputAction.next,
                                   preFixIcon: Icon(
                                     Icons.phone_outlined,
-                                    color: Colors.grey[600],
+                                    color: AppColors.grey600,
                                   ),
                                 ),
                                 SizedBox(height: 15),
@@ -425,7 +465,7 @@ class _RegisterState extends State<Register> {
                                   inputAction: TextInputAction.next,
                                   preFixIcon: Icon(
                                     Icons.location_on_outlined,
-                                    color: Colors.grey[600],
+                                    color: AppColors.grey600,
                                   ),
                                 ),
                                 SizedBox(height: 15),
@@ -439,7 +479,9 @@ class _RegisterState extends State<Register> {
                                     borderRadius: BorderRadius.circular(8),
                                   ),
                                   child: Padding(
-                                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 12,
+                                    ),
                                     child: DropdownButtonHideUnderline(
                                       child: DropdownButton<String>(
                                         value: selectedRoleDisplay,
@@ -458,9 +500,14 @@ class _RegisterState extends State<Register> {
                                           setState(() {
                                             selectedRoleDisplay = value!;
                                             // Convert to lowercase for API
-                                            selectedRoleApi = value.toLowerCase();
-                                            print("Selected role (display): $selectedRoleDisplay");
-                                            print("Selected role (API): $selectedRoleApi");
+                                            selectedRoleApi = value
+                                                .toLowerCase();
+                                            print(
+                                              "Selected role (display): $selectedRoleDisplay",
+                                            );
+                                            print(
+                                              "Selected role (API): $selectedRoleApi",
+                                            );
                                           });
                                         },
                                       ),
@@ -475,37 +522,51 @@ class _RegisterState extends State<Register> {
                         SizedBox(height: 30),
 
                         // Register Button
-                        SizedBox(
-                          width: double.infinity,
+                        Container(
                           height: 50,
+                          width: .infinity,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(25),
+                            gradient: LinearGradient(
+                              colors: [
+                                AppColors.appBarGradient.colors[0].withOpacity(
+                                  0.9,
+                                ),
+                                AppColors.appBarGradient.colors[1].withOpacity(
+                                  0.7,
+                                ),
+                              ],
+                            ),
+                          ),
                           child: ElevatedButton(
                             onPressed: _isLoading ? null : validateFields,
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: AppColors.primaryColor,
+                              backgroundColor: Colors.transparent,
+                              shadowColor: Colors.transparent,
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(25),
                               ),
-                              elevation: 3,
+                              elevation: 0,
                             ),
                             child: _isLoading
                                 ? SizedBox(
-                              height: 20,
-                              width: 20,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                valueColor: AlwaysStoppedAnimation<Color>(
-                                  Colors.white,
-                                ),
-                              ),
-                            )
+                                    height: 20,
+                                    width: 20,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      valueColor: AlwaysStoppedAnimation<Color>(
+                                        Colors.white,
+                                      ),
+                                    ),
+                                  )
                                 : Text(
-                              'Create Account',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
+                                    'Create Account',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
                           ),
                         ),
 
@@ -516,29 +577,48 @@ class _RegisterState extends State<Register> {
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Text(
-                              "Already have an account? ",
+                              "Already have an account?  ",
                               style: TextStyle(color: Colors.grey[600]),
                             ),
-                            GestureDetector(
-                              onTap: () {
-                                Navigator.pushReplacement(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) => Login(),
+                            ShaderMask(
+                              blendMode: BlendMode.srcIn,
+                              shaderCallback: (bounds) {
+                                return LinearGradient(
+                                  colors: [
+                                    AppColors.appBarGradient.colors[0]
+                                        .withOpacity(0.9),
+                                    AppColors.appBarGradient.colors[1]
+                                        .withOpacity(0.7),
+                                  ],
+                                ).createShader(
+                                  Rect.fromLTWH(
+                                    0,
+                                    0,
+                                    bounds.width,
+                                    bounds.height,
                                   ),
                                 );
                               },
-                              child: Text(
-                                "Login",
-                                style: TextStyle(
-                                  color: AppColors.primaryColor,
-                                  fontWeight: FontWeight.bold,
+                              child: GestureDetector(
+                                onTap:() {
+                                  Navigator.pushReplacement(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => Login(),
+                                    ),
+                                  );
+                                },
+                                child: Text(
+                                  'Login',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white,
+                                  ),
                                 ),
                               ),
                             ),
                           ],
                         ),
-
                         SizedBox(height: 20),
                       ],
                     ),

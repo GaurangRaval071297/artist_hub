@@ -1,9 +1,12 @@
-import 'package:artist_hub/Screen/Auth/Login.dart';
 import 'package:flutter/material.dart';
 import 'dart:async';
 import 'package:connectivity_plus/connectivity_plus.dart';
 
+import '../Auth/Login.dart';
 import '../Connection/connectivity_screen.dart';
+import '../Dashboard/Artist Dashboard/artist_dashboard.dart';
+import '../Dashboard/Customer Dashboard/customer dashboard.dart';
+import '../Shared Preference/shared_pref.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -13,12 +16,41 @@ class SplashScreen extends StatefulWidget {
 }
 
 class _SplashScreenState extends State<SplashScreen> {
-  bool _isConnected = true;
+  bool _isChecking = true;
+  bool _initializationError = false;
 
   @override
   void initState() {
     super.initState();
-    _checkInternetAndNavigate();
+    _initializeAndCheck();
+  }
+
+  Future<void> _initializeAndCheck() async {
+    try {
+      // First check if SharedPreferences is initialized
+      if (!SharedPreferencesService.isInitialized) {
+        // Try to initialize it
+        await SharedPreferencesService.init();
+      }
+
+      // Then proceed with normal flow
+      await _checkInternetAndNavigate();
+    } catch (e) {
+      print('Initialization error: $e');
+      setState(() {
+        _initializationError = true;
+        _isChecking = false;
+      });
+
+      // Fallback - go to login after delay
+      await Future.delayed(const Duration(seconds: 2));
+      if (mounted) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => Login()),
+        );
+      }
+    }
   }
 
   Future<void> _checkInternetAndNavigate() async {
@@ -31,18 +63,65 @@ class _SplashScreenState extends State<SplashScreen> {
     if (mounted) {
       if (connectivityResult.contains(ConnectivityResult.mobile) ||
           connectivityResult.contains(ConnectivityResult.wifi)) {
-        // Internet is available, go to Login
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => Login()),
-        );
+        // Internet is available
+        _checkLoginStatus();
       } else {
         // No internet, show connectivity error screen
+        setState(() {
+          _isChecking = false;
+        });
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (context) => ConnectivityErrorScreen()),
         );
       }
+    }
+  }
+
+  Future<void> _checkLoginStatus() async {
+    try {
+      // Check if user is already logged in using SharedPreferences
+      bool isLoggedIn = SharedPreferencesService.isLoggedIn();
+
+      if (mounted) {
+        setState(() {
+          _isChecking = false;
+        });
+
+        await Future.delayed(const Duration(milliseconds: 500));
+
+        if (isLoggedIn) {
+          // User is logged in, check role and navigate to appropriate dashboard
+          String userRole = SharedPreferencesService.getUserRole();
+
+          print("User is logged in with role: $userRole");
+
+          if (userRole == 'artist') {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => ArtistDashboard()),
+            );
+          } else {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => CustomerDashboard()),
+            );
+          }
+        } else {
+          // User is not logged in, go to Login screen
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => Login()),
+          );
+        }
+      }
+    } catch (e) {
+      print('Error checking login status: $e');
+      // Fallback to login screen
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => Login()),
+      );
     }
   }
 
@@ -108,22 +187,42 @@ class _SplashScreenState extends State<SplashScreen> {
 
                 const SizedBox(height: 50),
 
-                // Loading indicator with connectivity status
-                Column(
-                  children: [
-                    const CircularProgressIndicator(
-                      valueColor: AlwaysStoppedAnimation<Color>(Colors.deepPurple),
-                    ),
-                    const SizedBox(height: 15),
-                    Text(
-                      'Checking connection...',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.grey[600],
+                // Error message if initialization failed
+                if (_initializationError)
+                  Column(
+                    children: [
+                      Icon(
+                        Icons.error_outline,
+                        color: Colors.orange,
+                        size: 40,
                       ),
-                    ),
-                  ],
-                ),
+                      SizedBox(height: 10),
+                      Text(
+                        'Initializing app...',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                    ],
+                  )
+                else
+                // Loading indicator with connectivity status
+                  Column(
+                    children: [
+                      const CircularProgressIndicator(
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.deepPurple),
+                      ),
+                      const SizedBox(height: 15),
+                      Text(
+                        _isChecking ? 'Checking connection...' : 'Loading app...',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                    ],
+                  ),
 
                 const SizedBox(height: 20),
 
