@@ -11,7 +11,6 @@ import '../Dashboard/Artist Dashboard/artist_dashboard.dart';
 import '../Dashboard/Customer Dashboard/customer dashboard.dart';
 import '../Shared Preference/shared_pref.dart';
 
-// 10.240.82.105
 class Login extends StatefulWidget {
   const Login({super.key});
 
@@ -24,6 +23,10 @@ class _LoginState extends State<Login> {
   TextEditingController password = TextEditingController();
   bool _obscurePassword = true;
   bool _isLoading = false;
+
+  // Role selection variables
+  String? _selectedRole;
+  final List<String> _roles = ['artist', 'customer'];
 
   void showAlert(String msg) {
     showDialog(
@@ -51,6 +54,12 @@ class _LoginState extends State<Login> {
   }
 
   void validateLogin() async {
+    // Role validation
+    if (_selectedRole == null) {
+      showAlert("Please select a role");
+      return;
+    }
+
     if (email.text.isEmpty) {
       showAlert("Please enter email");
     } else if (password.text.isEmpty) {
@@ -65,50 +74,78 @@ class _LoginState extends State<Login> {
       _isLoading = true;
     });
 
-    Map<String, String> data = {"email": email.text, "password": password.text};
+    // Add role to data for API
+    Map<String, dynamic> data = {
+      "email": email.text,
+      "password": password.text,
+      "role": _selectedRole ?? '',
+    };
+
+    print("Login Data: $data");
+    print("Login URL: ${ApiUrls.loginUrl}");
 
     try {
       var response = await ApiServices.postApi(ApiUrls.loginUrl, data);
+
+      print("Login Response: $response");
 
       setState(() {
         _isLoading = false;
       });
 
-      if (response["status"] == true) {
+      if (response["status"] == true || response["code"] == 200) {
         // Parse the response using your RegisterModel
         var registerModel = RegisterModel.fromJson(response);
 
         if (registerModel.user != null) {
-          // Save user data to SharedPreferences
-          await SharedPreferencesService.saveUserData({
+          // SAVE USER DATA TO SHARED PREFERENCES
+          Map<String, dynamic> userData = {
             'id': registerModel.user!.userId?.toString() ?? '',
             'name': registerModel.user!.name ?? '',
             'email': registerModel.user!.email ?? '',
-            'role': registerModel.user!.role ?? 'customer',
+            'role': registerModel.user!.role?.toLowerCase() ?? 'customer',
             'phone': registerModel.user!.phone ?? '',
             'address': registerModel.user!.address ?? '',
             'profile_pic': registerModel.user!.profilePic ?? '',
             'artist_id': registerModel.user!.artistId?.toString() ?? '',
-          });
+          };
+
+          // Save to SharedPreferences
+          await SharedPreferencesService.saveUserData(userData);
+
+          // Print saved data for debugging
+          SharedPreferencesService.printAllData();
 
           // Check user role and navigate accordingly
-          String userRole = registerModel.user!.role?.toLowerCase() ?? 'customer';
+          String userRole =
+              registerModel.user!.role?.toLowerCase() ?? 'customer';
 
           showAlert("Login Successful");
 
+          // Wait a moment before navigation
+          await Future.delayed(const Duration(milliseconds: 1500));
+
+          // Close the alert dialog
+          Navigator.of(context, rootNavigator: true).pop();
+
+          // Navigate based on role
           if (userRole == 'artist') {
-            Navigator.pushReplacement(
+            Navigator.pushAndRemoveUntil(
               context,
-              MaterialPageRoute(builder: (context) => ArtistDashboard()),
+              MaterialPageRoute(builder: (context) => const ArtistDashboard()),
+              (route) => false,
             );
           } else {
-            Navigator.pushReplacement(
+            Navigator.pushAndRemoveUntil(
               context,
-              MaterialPageRoute(builder: (context) => CustomerDashboard()),
+              MaterialPageRoute(
+                builder: (context) => const CustomerDashboard(),
+              ),
+              (route) => false,
             );
           }
         } else {
-          showAlert("User data not found");
+          showAlert("User data not found in response");
         }
       } else {
         showAlert(response["message"] ?? "Login failed");
@@ -117,8 +154,10 @@ class _LoginState extends State<Login> {
       setState(() {
         _isLoading = false;
       });
-      showAlert("Something went wrong");
-      print("Login Error: $e");
+      showAlert(
+        "Connection error: Please check your internet and server connection",
+      );
+      print("Login Error Details: $e");
     }
   }
 
@@ -137,7 +176,6 @@ class _LoginState extends State<Login> {
               ],
             ),
           ),
-
           child: SingleChildScrollView(
             child: Column(
               children: [
@@ -238,6 +276,73 @@ class _LoginState extends State<Login> {
                             padding: const EdgeInsets.all(16.0),
                             child: Column(
                               children: [
+                                // Role Dropdown
+                                Container(
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(10),
+                                    border: Border.all(
+                                      color: Colors.grey[300]!,
+                                      width: 1,
+                                    ),
+                                  ),
+                                  child: Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 12,
+                                    ),
+                                    child: DropdownButtonFormField<String>(
+                                      value: _selectedRole,
+                                      onChanged: (String? newValue) {
+                                        setState(() {
+                                          _selectedRole = newValue;
+                                        });
+                                      },
+                                      decoration: InputDecoration(
+                                        border: InputBorder.none,
+                                        prefixIcon: Icon(
+                                          Icons.person_outline,
+                                          color: AppColors.grey600,
+                                        ),
+                                        hintText: 'Select Role',
+                                        hintStyle: TextStyle(
+                                          color: Colors.grey[500],
+                                        ),
+                                      ),
+                                      items: _roles.map((String role) {
+                                        return DropdownMenuItem<String>(
+                                          value: role,
+                                          child: Text(
+                                            role == 'artist'
+                                                ? 'Artist'
+                                                : 'Customer',
+                                            style: TextStyle(
+                                              fontSize: 16,
+                                              color: Colors.grey[700],
+                                            ),
+                                          ),
+                                        );
+                                      }).toList(),
+                                      icon: Icon(
+                                        Icons.arrow_drop_down,
+                                        color: AppColors.grey600,
+                                      ),
+                                      isExpanded: true,
+                                      dropdownColor: Colors.white,
+                                      style: TextStyle(
+                                        color: Colors.grey[700],
+                                        fontSize: 16,
+                                      ),
+                                      validator: (value) {
+                                        if (value == null || value.isEmpty) {
+                                          return 'Please select a role';
+                                        }
+                                        return null;
+                                      },
+                                    ),
+                                  ),
+                                ),
+                                SizedBox(height: 15),
+
                                 // Email Field
                                 CommonTextfields(
                                   keyboardType: TextInputType.emailAddress,
@@ -269,10 +374,9 @@ class _LoginState extends State<Login> {
                                           : Icons.visibility,
                                       color: Colors.grey[600],
                                     ),
-                                    onPressed: () => setState(
-                                      () =>
-                                          _obscurePassword = !_obscurePassword,
-                                    ),
+                                    onPressed: () => setState(() {
+                                      _obscurePassword = !_obscurePassword;
+                                    }),
                                   ),
                                 ),
 
@@ -304,7 +408,7 @@ class _LoginState extends State<Login> {
                         // Login Button
                         Container(
                           height: 50,
-                          width: .infinity,
+                          width: double.infinity,
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(25),
                             gradient: LinearGradient(
@@ -356,7 +460,7 @@ class _LoginState extends State<Login> {
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Text(
-                              "Already have an account? ",
+                              "Don't have an account? ",
                               style: TextStyle(color: Colors.grey[600]),
                             ),
                             ShaderMask(
@@ -387,7 +491,7 @@ class _LoginState extends State<Login> {
                                     ),
                                   );
                                 },
-                                child: Text(
+                                child: const Text(
                                   'Register',
                                   style: TextStyle(
                                     fontWeight: FontWeight.bold,
