@@ -26,18 +26,13 @@ class _SplashScreenState extends State<SplashScreen> {
 
   Future<void> _initializeApp() async {
     try {
-      // Step 1: Wait minimum 2 seconds for splash
       await Future.delayed(const Duration(seconds: 2));
-
       setState(() {
         _statusMessage = 'Checking connectivity...';
       });
-
-      // Step 2: Check internet connectivity
       final connectivityResult = await Connectivity().checkConnectivity();
       final hasInternet = connectivityResult.contains(ConnectivityResult.mobile) ||
           connectivityResult.contains(ConnectivityResult.wifi);
-
       if (!hasInternet) {
         if (mounted) {
           Navigator.pushReplacement(
@@ -47,37 +42,18 @@ class _SplashScreenState extends State<SplashScreen> {
         }
         return;
       }
-
       setState(() {
         _statusMessage = 'Checking login status...';
       });
-
-      // Step 3: Check if SharedPreferences is initialized
       if (!SharedPreferencesService.isInitialized) {
-        print('⚠️ SharedPreferences not initialized, attempting to initialize...');
         await SharedPreferencesService.init();
       }
-
-      // Step 4: Check login status
       bool isLoggedIn = SharedPreferencesService.isLoggedIn();
-
-      print('🔍 Login Status: $isLoggedIn');
-
       if (isLoggedIn) {
         String userRole = SharedPreferencesService.getUserRole().toLowerCase();
         String userName = SharedPreferencesService.getUserName();
-
-        print('👤 User Role: $userRole');
-        print('👤 User Name: $userName');
-        print('🔍 All User Data: ${SharedPreferencesService.getUserData()}');
-
-        // Debug: Print all stored data
-        SharedPreferencesService.printAllData();
-
-        // Navigate based on role
         if (mounted) {
           await Future.delayed(const Duration(milliseconds: 500));
-
           if (userRole == 'artist') {
             Navigator.pushReplacement(
               context,
@@ -91,7 +67,6 @@ class _SplashScreenState extends State<SplashScreen> {
           }
         }
       } else {
-        // Not logged in, go to login
         if (mounted) {
           Navigator.pushReplacement(
             context,
@@ -100,9 +75,6 @@ class _SplashScreenState extends State<SplashScreen> {
         }
       }
     } catch (e) {
-      print('❌ Error in splash screen: $e');
-
-      // Fallback to login screen on any error
       if (mounted) {
         Navigator.pushReplacement(
           context,
@@ -120,7 +92,6 @@ class _SplashScreenState extends State<SplashScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // Logo/Icon
             Container(
               width: 120,
               height: 120,
@@ -141,10 +112,7 @@ class _SplashScreenState extends State<SplashScreen> {
                 color: Colors.deepPurple,
               ),
             ),
-
             const SizedBox(height: 30),
-
-            // App Name with gradient
             Text(
               'Artist Hub',
               style: TextStyle(
@@ -156,10 +124,7 @@ class _SplashScreenState extends State<SplashScreen> {
                   ).createShader(const Rect.fromLTWH(0, 0, 200, 70)),
               ),
             ),
-
             const SizedBox(height: 10),
-
-            // Tagline
             const Text(
               'Connect • Create • Inspire',
               style: TextStyle(
@@ -168,17 +133,11 @@ class _SplashScreenState extends State<SplashScreen> {
                 letterSpacing: 1.2,
               ),
             ),
-
             const SizedBox(height: 50),
-
-            // Loading indicator
             const CircularProgressIndicator(
               valueColor: AlwaysStoppedAnimation<Color>(Colors.deepPurple),
             ),
-
             const SizedBox(height: 15),
-
-            // Status message
             Text(
               _statusMessage,
               style: const TextStyle(
@@ -186,10 +145,7 @@ class _SplashScreenState extends State<SplashScreen> {
                 color: Colors.grey,
               ),
             ),
-
             const SizedBox(height: 20),
-
-            // Version
             const Text(
               'v1.0.0',
               style: TextStyle(fontSize: 12, color: Colors.grey),

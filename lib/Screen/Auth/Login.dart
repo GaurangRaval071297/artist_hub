@@ -1,11 +1,11 @@
+import 'package:flutter/material.dart';
 import 'package:artist_hub/Constants/api_urls.dart';
 import 'package:artist_hub/Constants/app_colors.dart';
 import 'package:artist_hub/Screen/Auth/Register.dart';
 import 'package:artist_hub/Services/api_services.dart';
 import 'package:artist_hub/Widgets/Common%20Textfields/common_textfields.dart';
-import 'package:flutter/material.dart';
 import 'package:gradient_borders/box_borders/gradient_box_border.dart';
-
+import 'package:google_sign_in/google_sign_in.dart';
 import '../../Models/register_model.dart';
 import '../Dashboard/Artist Dashboard/artist_dashboard.dart';
 import '../Dashboard/Customer Dashboard/customer dashboard.dart';
@@ -23,12 +23,42 @@ class _LoginState extends State<Login> {
   TextEditingController password = TextEditingController();
   bool _obscurePassword = true;
   bool _isLoading = false;
-
-  // Role selection variables
+  bool _isGoogleLoading = false;
   String? _selectedRole;
   final List<String> _roles = ['artist', 'customer'];
+  late final GoogleSignIn _googleSignIn;
+
+  @override
+  void initState() {
+    super.initState();
+    _googleSignIn = GoogleSignIn(scopes: ['email', 'profile']);
+    _loadSavedUserData();
+  }
+
+  Future<void> _loadSavedUserData() async {
+    try {
+      String savedEmail = SharedPreferencesService.getUserEmail();
+      String savedRole = SharedPreferencesService.getUserRole();
+      print("=== LOADING SAVED USER DATA ===");
+      print("Saved Email: $savedEmail");
+      print("Saved Role: $savedRole");
+      print("================================");
+
+      if (mounted) {
+        setState(() {
+          email.text = savedEmail;
+          if (savedRole.isNotEmpty && _roles.contains(savedRole)) {
+            _selectedRole = savedRole;
+          }
+        });
+      }
+    } catch (e) {
+      print("Error loading saved user data: $e");
+    }
+  }
 
   void showAlert(String msg) {
+    print("Alert Dialog: $msg");
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -53,13 +83,119 @@ class _LoginState extends State<Login> {
     );
   }
 
+  Future<void> signInWithGoogle() async {
+    print("=== GOOGLE SIGN IN STARTED ===");
+    print("Selected Role: $_selectedRole");
+
+    if (_selectedRole == null) {
+      showAlert("Please select a role (Artist or Customer)");
+      return;
+    }
+
+    setState(() {
+      _isGoogleLoading = true;
+    });
+
+    try {
+      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
+      if (googleUser == null) {
+        print("Google sign in cancelled by user");
+        setState(() {
+          _isGoogleLoading = false;
+        });
+        showAlert("Google sign in cancelled");
+        return;
+      }
+
+      print("=== GOOGLE USER DATA ===");
+      print("User ID: ${googleUser.id}");
+      print("Display Name: ${googleUser.displayName}");
+      print("Email: ${googleUser.email}");
+      print("Photo URL: ${googleUser.photoUrl}");
+      print("=========================");
+
+      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+
+      Map<String, dynamic> userData = {
+        'id': googleUser.id,
+        'name': googleUser.displayName ?? '',
+        'email': googleUser.email,
+        'role': _selectedRole,
+        'profile_pic': googleUser.photoUrl ?? '',
+        'provider': 'google',
+        'phone': '',
+        'address': '',
+      };
+
+      print("=== USER DATA TO SAVE ===");
+      userData.forEach((key, value) {
+        print("$key: $value");
+      });
+      print("=========================");
+
+      await SharedPreferencesService.saveUserData(userData);
+
+      print("=== AFTER SAVING TO SHARED PREFERENCES ===");
+      SharedPreferencesService.printAllData();
+
+      setState(() {
+        _isGoogleLoading = false;
+      });
+
+      print("Google Login Successful! Navigating...");
+      showAlert("Google Login Successful!");
+
+      await Future.delayed(const Duration(milliseconds: 1500));
+      Navigator.of(context, rootNavigator: true).pop();
+
+      if (_selectedRole == 'artist') {
+        print("Navigating to Artist Dashboard");
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(builder: (context) => const ArtistDashboard()),
+              (route) => false,
+        );
+      } else {
+        print("Navigating to Customer Dashboard");
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(builder: (context) => const CustomerDashboard()),
+              (route) => false,
+        );
+      }
+    } catch (e) {
+      setState(() {
+        _isGoogleLoading = false;
+      });
+      print("=== GOOGLE SIGN IN ERROR ===");
+      print("Error Type: ${e.runtimeType}");
+      print("Error Message: ${e.toString()}");
+      print("============================");
+
+      String errorMessage = "Google login failed";
+      if (e.toString().contains('sign_in_failed')) {
+        errorMessage = "Google Sign-In failed. Please check your Google Play Services.";
+      } else if (e.toString().contains('network_error')) {
+        errorMessage = "Network error. Please check your internet connection.";
+      } else if (e.toString().contains('developer_error')) {
+        errorMessage = "Developer error. App not configured for Google Sign-In.";
+      } else if (e.toString().contains('PlatformException')) {
+        errorMessage = "Platform error. Please try again.";
+      }
+      showAlert("$errorMessage\n\nError details: ${e.toString()}");
+    }
+  }
+
   void validateLogin() async {
-    // Role validation
+    print("=== VALIDATE LOGIN ===");
+    print("Email: ${email.text}");
+    print("Password: ${password.text}");
+    print("Selected Role: $_selectedRole");
+
     if (_selectedRole == null) {
       showAlert("Please select a role");
       return;
     }
-
     if (email.text.isEmpty) {
       showAlert("Please enter email");
     } else if (password.text.isEmpty) {
@@ -70,35 +206,52 @@ class _LoginState extends State<Login> {
   }
 
   Future<void> loginUser() async {
+    print("=== LOGIN USER STARTED ===");
+    print("API URL: ${ApiUrls.loginUrl}");
+    print("Login Data:");
+    print("- Email: ${email.text}");
+    print("- Password: [HIDDEN]");
+    print("- Role: ${_selectedRole ?? ''}");
+
     setState(() {
       _isLoading = true;
     });
 
-    // Add role to data for API
     Map<String, dynamic> data = {
       "email": email.text,
       "password": password.text,
       "role": _selectedRole ?? '',
     };
 
-    print("Login Data: $data");
-    print("Login URL: ${ApiUrls.loginUrl}");
-
     try {
+      print("Sending API request...");
       var response = await ApiServices.postApi(ApiUrls.loginUrl, data);
 
-      print("Login Response: $response");
+      print("=== API RESPONSE ===");
+      print("Full Response: $response");
+      print("Status: ${response["status"]}");
+      print("Code: ${response["code"]}");
+      print("Message: ${response["message"]}");
 
       setState(() {
         _isLoading = false;
       });
 
       if (response["status"] == true || response["code"] == 200) {
-        // Parse the response using your RegisterModel
         var registerModel = RegisterModel.fromJson(response);
 
         if (registerModel.user != null) {
-          // SAVE USER DATA TO SHARED PREFERENCES
+          print("=== USER DATA FROM API ===");
+          print("User ID: ${registerModel.user!.userId}");
+          print("Name: ${registerModel.user!.name}");
+          print("Email: ${registerModel.user!.email}");
+          print("Role: ${registerModel.user!.role}");
+          print("Phone: ${registerModel.user!.phone}");
+          print("Address: ${registerModel.user!.address}");
+          print("Profile Pic: ${registerModel.user!.profilePic}");
+          print("Artist ID: ${registerModel.user!.artistId}");
+          print("===========================");
+
           Map<String, dynamic> userData = {
             'id': registerModel.user!.userId?.toString() ?? '',
             'name': registerModel.user!.name ?? '',
@@ -110,53 +263,54 @@ class _LoginState extends State<Login> {
             'artist_id': registerModel.user!.artistId?.toString() ?? '',
           };
 
-          // Save to SharedPreferences
+          print("=== SAVING TO SHARED PREFERENCES ===");
           await SharedPreferencesService.saveUserData(userData);
 
-          // Print saved data for debugging
+          print("=== AFTER SAVING DATA ===");
           SharedPreferencesService.printAllData();
 
-          // Check user role and navigate accordingly
-          String userRole =
-              registerModel.user!.role?.toLowerCase() ?? 'customer';
+          String userRole = registerModel.user!.role?.toLowerCase() ?? 'customer';
 
+          print("Login Successful! Role: $userRole");
           showAlert("Login Successful");
 
-          // Wait a moment before navigation
           await Future.delayed(const Duration(milliseconds: 1500));
-
-          // Close the alert dialog
           Navigator.of(context, rootNavigator: true).pop();
 
-          // Navigate based on role
           if (userRole == 'artist') {
+            print("Navigating to Artist Dashboard");
             Navigator.pushAndRemoveUntil(
               context,
               MaterialPageRoute(builder: (context) => const ArtistDashboard()),
-              (route) => false,
+                  (route) => false,
             );
           } else {
+            print("Navigating to Customer Dashboard");
             Navigator.pushAndRemoveUntil(
               context,
-              MaterialPageRoute(
-                builder: (context) => const CustomerDashboard(),
-              ),
-              (route) => false,
+              MaterialPageRoute(builder: (context) => const CustomerDashboard()),
+                  (route) => false,
             );
           }
         } else {
+          print("ERROR: User data not found in response");
           showAlert("User data not found in response");
         }
       } else {
+        print("Login failed: ${response["message"] ?? "No message"}");
         showAlert(response["message"] ?? "Login failed");
       }
     } catch (e) {
       setState(() {
         _isLoading = false;
       });
-      showAlert(
-        "Connection error: Please check your internet and server connection",
-      );
+
+      print("=== LOGIN ERROR ===");
+      print("Error Type: ${e.runtimeType}");
+      print("Error Message: ${e.toString()}");
+      print("====================");
+
+      showAlert("Connection error: Please check your internet and server connection");
       print("Login Error Details: $e");
     }
   }
@@ -179,12 +333,11 @@ class _LoginState extends State<Login> {
           child: SingleChildScrollView(
             child: Column(
               children: [
-                // Header Section
                 Container(
-                  padding: EdgeInsets.all(20),
+                  padding: const EdgeInsets.all(20),
                   child: Column(
                     children: [
-                      SizedBox(height: 30),
+                      const SizedBox(height: 30),
                       Text(
                         "Welcome Back",
                         style: TextStyle(
@@ -193,7 +346,7 @@ class _LoginState extends State<Login> {
                           color: Colors.white,
                         ),
                       ),
-                      SizedBox(height: 10),
+                      const SizedBox(height: 10),
                       Text(
                         "Sign in to your account",
                         style: TextStyle(
@@ -204,13 +357,11 @@ class _LoginState extends State<Login> {
                     ],
                   ),
                 ),
-
-                // White Form Section
                 Container(
                   width: double.infinity,
                   decoration: BoxDecoration(
                     color: Colors.white,
-                    borderRadius: BorderRadius.only(
+                    borderRadius: const BorderRadius.only(
                       topLeft: Radius.circular(30),
                       topRight: Radius.circular(30),
                     ),
@@ -226,9 +377,7 @@ class _LoginState extends State<Login> {
                     padding: const EdgeInsets.all(20.0),
                     child: Column(
                       children: [
-                        SizedBox(height: 20),
-
-                        // Profile Icon
+                        const SizedBox(height: 20),
                         Container(
                           width: 100,
                           height: 100,
@@ -238,10 +387,8 @@ class _LoginState extends State<Login> {
                             border: GradientBoxBorder(
                               gradient: LinearGradient(
                                 colors: [
-                                  AppColors.appBarGradient.colors[0]
-                                      .withOpacity(0.9),
-                                  AppColors.appBarGradient.colors[1]
-                                      .withOpacity(0.7),
+                                  AppColors.appBarGradient.colors[0].withOpacity(0.9),
+                                  AppColors.appBarGradient.colors[1].withOpacity(0.7),
                                 ],
                               ),
                             ),
@@ -252,7 +399,7 @@ class _LoginState extends State<Login> {
                             color: AppColors.grey600,
                           ),
                         ),
-                        SizedBox(height: 5),
+                        const SizedBox(height: 5),
                         Text(
                           "Login",
                           style: TextStyle(
@@ -260,9 +407,7 @@ class _LoginState extends State<Login> {
                             fontSize: 14,
                           ),
                         ),
-                        SizedBox(height: 30),
-
-                        // Form Fields Container
+                        const SizedBox(height: 30),
                         Container(
                           decoration: BoxDecoration(
                             color: Colors.grey[50]!,
@@ -276,7 +421,6 @@ class _LoginState extends State<Login> {
                             padding: const EdgeInsets.all(16.0),
                             child: Column(
                               children: [
-                                // Role Dropdown
                                 Container(
                                   decoration: BoxDecoration(
                                     color: Colors.white,
@@ -287,14 +431,13 @@ class _LoginState extends State<Login> {
                                     ),
                                   ),
                                   child: Padding(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 12,
-                                    ),
+                                    padding: const EdgeInsets.symmetric(horizontal: 12),
                                     child: DropdownButtonFormField<String>(
                                       value: _selectedRole,
                                       onChanged: (String? newValue) {
                                         setState(() {
                                           _selectedRole = newValue;
+                                          print("Role changed to: $newValue");
                                         });
                                       },
                                       decoration: InputDecoration(
@@ -304,17 +447,13 @@ class _LoginState extends State<Login> {
                                           color: AppColors.grey600,
                                         ),
                                         hintText: 'Select Role',
-                                        hintStyle: TextStyle(
-                                          color: Colors.grey[500],
-                                        ),
+                                        hintStyle: TextStyle(color: Colors.grey[500]),
                                       ),
                                       items: _roles.map((String role) {
                                         return DropdownMenuItem<String>(
                                           value: role,
                                           child: Text(
-                                            role == 'artist'
-                                                ? 'Artist'
-                                                : 'Customer',
+                                            role == 'artist' ? 'Artist' : 'Customer',
                                             style: TextStyle(
                                               fontSize: 16,
                                               color: Colors.grey[700],
@@ -341,9 +480,7 @@ class _LoginState extends State<Login> {
                                     ),
                                   ),
                                 ),
-                                SizedBox(height: 15),
-
-                                // Email Field
+                                const SizedBox(height: 15),
                                 CommonTextfields(
                                   keyboardType: TextInputType.emailAddress,
                                   controller: email,
@@ -354,9 +491,7 @@ class _LoginState extends State<Login> {
                                     color: AppColors.grey600,
                                   ),
                                 ),
-                                SizedBox(height: 15),
-
-                                // Password Field
+                                const SizedBox(height: 15),
                                 CommonTextfields(
                                   keyboardType: TextInputType.visiblePassword,
                                   controller: password,
@@ -374,20 +509,20 @@ class _LoginState extends State<Login> {
                                           : Icons.visibility,
                                       color: Colors.grey[600],
                                     ),
-                                    onPressed: () => setState(() {
-                                      _obscurePassword = !_obscurePassword;
-                                    }),
+                                    onPressed: () {
+                                      setState(() {
+                                        _obscurePassword = !_obscurePassword;
+                                        print("Password visibility toggled: $_obscurePassword");
+                                      });
+                                    },
                                   ),
                                 ),
-
-                                // Forgot Password
                                 Align(
                                   alignment: Alignment.centerRight,
                                   child: TextButton(
                                     onPressed: () {
-                                      showAlert(
-                                        "Forgot Password feature coming soon!",
-                                      );
+                                      print("Forgot Password clicked");
+                                      showAlert("Forgot Password feature coming soon!");
                                     },
                                     child: Text(
                                       "Forgot Password?",
@@ -402,10 +537,7 @@ class _LoginState extends State<Login> {
                             ),
                           ),
                         ),
-
-                        SizedBox(height: 30),
-
-                        // Login Button
+                        const SizedBox(height: 30),
                         Container(
                           height: 50,
                           width: double.infinity,
@@ -413,12 +545,8 @@ class _LoginState extends State<Login> {
                             borderRadius: BorderRadius.circular(25),
                             gradient: LinearGradient(
                               colors: [
-                                AppColors.appBarGradient.colors[0].withOpacity(
-                                  0.9,
-                                ),
-                                AppColors.appBarGradient.colors[1].withOpacity(
-                                  0.7,
-                                ),
+                                AppColors.appBarGradient.colors[0].withOpacity(0.9),
+                                AppColors.appBarGradient.colors[1].withOpacity(0.7),
                               ],
                             ),
                           ),
@@ -434,28 +562,89 @@ class _LoginState extends State<Login> {
                             ),
                             child: _isLoading
                                 ? SizedBox(
-                                    height: 20,
-                                    width: 20,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                      valueColor: AlwaysStoppedAnimation<Color>(
-                                        Colors.white,
-                                      ),
-                                    ),
-                                  )
+                              height: 20,
+                              width: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                valueColor: const AlwaysStoppedAnimation<Color>(
+                                    Colors.white),
+                              ),
+                            )
                                 : Text(
-                                    'Sign In',
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
+                              'Sign In',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
                           ),
                         ),
-
-                        SizedBox(height: 20),
-
+                        const SizedBox(height: 25),
+                        Row(
+                          children: [
+                            Expanded(child: Divider(color: Colors.grey[300])),
+                            Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 10),
+                              child: Text(
+                                'Or continue with',
+                                style: TextStyle(color: Colors.grey[600]),
+                              ),
+                            ),
+                            Expanded(child: Divider(color: Colors.grey[300])),
+                          ],
+                        ),
+                        const SizedBox(height: 25),
+                        Container(
+                          height: 50,
+                          width: double.infinity,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(25),
+                            border: Border.all(color: Colors.grey[300]!, width: 1),
+                            color: Colors.white,
+                          ),
+                          child: ElevatedButton(
+                            onPressed: _isGoogleLoading ? null : signInWithGoogle,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.white,
+                              foregroundColor: Colors.black,
+                              shadowColor: Colors.transparent,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(25),
+                              ),
+                              elevation: 0,
+                            ),
+                            child: _isGoogleLoading
+                                ? SizedBox(
+                              height: 20,
+                              width: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                valueColor:
+                                const AlwaysStoppedAnimation<Color>(Colors.blue),
+                              ),
+                            )
+                                : Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  Icons.g_mobiledata,
+                                  size: 24,
+                                  color: Colors.red,
+                                ),
+                                const SizedBox(width: 10),
+                                Text(
+                                  'Continue with Google',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 25),
                         Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
@@ -468,27 +657,19 @@ class _LoginState extends State<Login> {
                               shaderCallback: (bounds) {
                                 return LinearGradient(
                                   colors: [
-                                    AppColors.appBarGradient.colors[0]
-                                        .withOpacity(0.9),
-                                    AppColors.appBarGradient.colors[1]
-                                        .withOpacity(0.7),
+                                    AppColors.appBarGradient.colors[0].withOpacity(0.9),
+                                    AppColors.appBarGradient.colors[1].withOpacity(0.7),
                                   ],
                                 ).createShader(
-                                  Rect.fromLTWH(
-                                    0,
-                                    0,
-                                    bounds.width,
-                                    bounds.height,
-                                  ),
+                                  Rect.fromLTWH(0, 0, bounds.width, bounds.height),
                                 );
                               },
                               child: GestureDetector(
                                 onTap: () {
+                                  print("Navigate to Register screen");
                                   Navigator.pushReplacement(
                                     context,
-                                    MaterialPageRoute(
-                                      builder: (context) => Register(),
-                                    ),
+                                    MaterialPageRoute(builder: (context) => Register()),
                                   );
                                 },
                                 child: const Text(
@@ -502,8 +683,19 @@ class _LoginState extends State<Login> {
                             ),
                           ],
                         ),
-
-                        SizedBox(height: 20),
+                        const SizedBox(height: 20),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 20),
+                          child: Text(
+                            "Note: Your email will be remembered for next login.",
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey[600],
+                              fontStyle: FontStyle.italic,
+                            ),
+                          ),
+                        ),
                       ],
                     ),
                   ),

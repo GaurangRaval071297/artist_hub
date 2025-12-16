@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../Constants/app_colors.dart';
 import '../../Shared Preference/shared_pref.dart';
+import '../../Auth/Login.dart';
 
 class CustomerDashboard extends StatefulWidget {
   const CustomerDashboard({super.key});
@@ -26,17 +27,20 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
     });
   }
 
-  void _logout() async {
-    await SharedPreferencesService.logout();
-    // Navigate to login screen - update based on your routing
-    Navigator.pushReplacementNamed(context, '/login');
+  Future<void> _logout() async {
+    await SharedPreferencesService.clearAllData();
+    Navigator.pushAndRemoveUntil(
+      context,
+      MaterialPageRoute(builder: (context) => const Login()),
+          (route) => false,
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text("Customer Dashboard"),
+        title: const Text("Customer Dashboard"),
         leading: DrawerButton(color: AppColors.white),
         flexibleSpace: Container(
           decoration: BoxDecoration(
@@ -64,7 +68,7 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
               ),
               accountName: Text(
                 userName.isNotEmpty ? userName : 'Customer',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
               accountEmail: Text(
                 userEmail.isNotEmpty ? userEmail : 'customer@example.com',
@@ -80,47 +84,43 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
             ),
             ListTile(
               leading: Icon(Icons.dashboard, color: AppColors.primaryColor),
-              title: Text('Dashboard'),
+              title: const Text('Dashboard'),
               onTap: () {
                 Navigator.pop(context);
               },
             ),
             ListTile(
               leading: Icon(Icons.book, color: AppColors.primaryColor),
-              title: Text('My Courses'),
+              title: const Text('My Courses'),
               onTap: () {
                 Navigator.pop(context);
-                // Navigate to My Courses screen
               },
             ),
             ListTile(
               leading: Icon(Icons.workspace_premium, color: AppColors.primaryColor),
-              title: Text('Go Premium'),
+              title: const Text('Go Premium'),
               onTap: () {
                 Navigator.pop(context);
-                // Navigate to Premium screen
               },
             ),
             ListTile(
               leading: Icon(Icons.video_library, color: AppColors.primaryColor),
-              title: Text('Saved Videos'),
+              title: const Text('Saved Videos'),
               onTap: () {
                 Navigator.pop(context);
-                // Navigate to Saved Videos screen
               },
             ),
             ListTile(
               leading: Icon(Icons.edit, color: AppColors.primaryColor),
-              title: Text('Edit Profile'),
+              title: const Text('Edit Profile'),
               onTap: () {
                 Navigator.pop(context);
-                // Navigate to Edit Profile screen
               },
             ),
-            Divider(),
+            const Divider(),
             ListTile(
-              leading: Icon(Icons.logout, color: Colors.red),
-              title: Text('Logout', style: TextStyle(color: Colors.red)),
+              leading: const Icon(Icons.logout, color: Colors.red),
+              title: const Text('Logout', style: TextStyle(color: Colors.red)),
               onTap: () {
                 Navigator.pop(context);
                 _showLogoutConfirmation();
@@ -138,8 +138,8 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
               size: 80,
               color: AppColors.primaryColor,
             ),
-            SizedBox(height: 20),
-            Text(
+            const SizedBox(height: 20),
+            const Text(
               'Welcome to Customer Dashboard',
               style: TextStyle(
                 fontSize: 24,
@@ -147,21 +147,19 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
                 color: AppColors.primaryColor,
               ),
             ),
-            SizedBox(height: 10),
+            const SizedBox(height: 10),
             Text(
               'Customer ID: ${SharedPreferencesService.getUserId()}',
-              style: TextStyle(fontSize: 16),
+              style: const TextStyle(fontSize: 16),
             ),
-            SizedBox(height: 20),
+            const SizedBox(height: 20),
             ElevatedButton(
-              onPressed: () {
-                // Add customer-specific functionality
-              },
+              onPressed: () {},
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primaryColor,
-                padding: EdgeInsets.symmetric(horizontal: 30, vertical: 15),
+                padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
               ),
-              child: Text('Explore Features'),
+              child: const Text('Explore Features'),
             ),
           ],
         ),
@@ -173,19 +171,19 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('Logout'),
-        content: Text('Are you sure you want to logout?'),
+        title: const Text('Logout'),
+        content: const Text('Are you sure you want to logout?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text('Cancel'),
+            child: const Text('Cancel'),
           ),
           TextButton(
             onPressed: () {
               Navigator.pop(context);
               _logout();
             },
-            child: Text('Logout', style: TextStyle(color: Colors.red)),
+            child: const Text('Logout', style: TextStyle(color: Colors.red)),
           ),
         ],
       ),

@@ -31,8 +31,8 @@ class _ArtistDashboardState extends State<ArtistDashboard> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text("Logout"),
-        content: Text("Are you sure you want to logout?"),
+        title: const Text("Logout"),
+        content: const Text("Are you sure you want to logout?"),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -40,10 +40,10 @@ class _ArtistDashboardState extends State<ArtistDashboard> {
           ),
           TextButton(
             onPressed: () async {
-              Navigator.pop(context); // Close dialog
+              Navigator.pop(context);
               await _performLogout();
             },
-            child: Text("Logout", style: TextStyle(color: Colors.red)),
+            child: const Text("Logout", style: TextStyle(color: Colors.red)),
           ),
         ],
       ),
@@ -52,21 +52,16 @@ class _ArtistDashboardState extends State<ArtistDashboard> {
 
   Future<void> _performLogout() async {
     try {
-      // Clear all shared preferences data
-      await SharedPreferencesService.logout();
-
-      // Navigate to login and remove all previous routes
+      await SharedPreferencesService.clearAllData();
       Navigator.pushAndRemoveUntil(
         context,
-        MaterialPageRoute(builder: (context) => Login()),
-            (route) => false, // This removes all previous routes
+        MaterialPageRoute(builder: (context) => const Login()),
+            (route) => false,
       );
     } catch (e) {
-      print('Logout error: $e');
-      // Fallback navigation if something goes wrong
       Navigator.pushAndRemoveUntil(
         context,
-        MaterialPageRoute(builder: (context) => Login()),
+        MaterialPageRoute(builder: (context) => const Login()),
             (route) => false,
       );
     }
@@ -76,7 +71,7 @@ class _ArtistDashboardState extends State<ArtistDashboard> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text("Artist Dashboard"),
+        title: const Text("Artist Dashboard"),
         leading: DrawerButton(color: AppColors.white),
         flexibleSpace: Container(
           decoration: BoxDecoration(
@@ -93,7 +88,6 @@ class _ArtistDashboardState extends State<ArtistDashboard> {
         backgroundColor: AppColors.white,
         child: ListView(
           children: [
-            // Drawer Header with User Info
             DrawerHeader(
               child: UserAccountsDrawerHeader(
                 decoration: BoxDecoration(
@@ -106,17 +100,13 @@ class _ArtistDashboardState extends State<ArtistDashboard> {
                 ),
                 accountName: Text(
                   userName.isNotEmpty ? userName : "Artist",
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
-                accountEmail: Text(
-                    userEmail.isNotEmpty ? userEmail : "artist@example.com"
-                ),
+                accountEmail: Text(userEmail.isNotEmpty ? userEmail : "artist@example.com"),
                 currentAccountPicture: CircleAvatar(
                   backgroundColor: Colors.white,
                   child: Text(
-                    userName.isNotEmpty
-                        ? userName[0].toUpperCase()
-                        : "A",
+                    userName.isNotEmpty ? userName[0].toUpperCase() : "A",
                     style: TextStyle(
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
@@ -126,74 +116,65 @@ class _ArtistDashboardState extends State<ArtistDashboard> {
                 ),
               ),
             ),
-
-            // Drawer Menu Items
             ListTile(
               leading: Icon(Icons.dashboard, color: AppColors.primaryColor),
-              title: Text('Dashboard'),
+              title: const Text('Dashboard'),
               onTap: () {
                 Navigator.pop(context);
               },
             ),
             ListTile(
               leading: Icon(Icons.palette, color: AppColors.primaryColor),
-              title: Text('My Artworks'),
+              title: const Text('My Artworks'),
               onTap: () {
                 Navigator.pop(context);
               },
             ),
             ListTile(
               leading: Icon(Icons.calendar_today, color: AppColors.primaryColor),
-              title: Text('Bookings'),
+              title: const Text('Bookings'),
               onTap: () {
                 Navigator.pop(context);
               },
             ),
             ListTile(
               leading: Icon(Icons.workspace_premium, color: AppColors.primaryColor),
-              title: Text('Go Premium'),
+              title: const Text('Go Premium'),
               onTap: () {
                 Navigator.pop(context);
               },
             ),
             ListTile(
               leading: Icon(Icons.video_label, color: AppColors.primaryColor),
-              title: Text('My Videos'),
+              title: const Text('My Videos'),
               onTap: () {
                 Navigator.pop(context);
               },
             ),
-
-            Divider(),
-
+            const Divider(),
             ListTile(
               leading: Icon(Icons.person, color: AppColors.primaryColor),
-              title: Text('Profile'),
+              title: const Text('Profile'),
               onTap: () {
                 Navigator.pop(context);
               },
             ),
             ListTile(
               leading: Icon(Icons.settings, color: AppColors.primaryColor),
-              title: Text('Settings'),
+              title: const Text('Settings'),
               onTap: () {
                 Navigator.pop(context);
               },
             ),
-
-            Divider(),
-
-            // Logout Button
+            const Divider(),
             ListTile(
-              leading: Icon(Icons.logout, color: Colors.red),
-              title: Text('Logout', style: TextStyle(color: Colors.red)),
+              leading: const Icon(Icons.logout, color: Colors.red),
+              title: const Text('Logout', style: TextStyle(color: Colors.red)),
               onTap: () {
-                Navigator.pop(context); // Close drawer first
+                Navigator.pop(context);
                 _showLogoutConfirmation();
               },
             ),
-
-            // App Version Info
             Padding(
               padding: const EdgeInsets.all(16.0),
               child: Text(
@@ -217,7 +198,7 @@ class _ArtistDashboardState extends State<ArtistDashboard> {
               size: 100,
               color: AppColors.appBarGradient.colors[0],
             ),
-            SizedBox(height: 20),
+            const SizedBox(height: 20),
             Text(
               'Welcome Artist!',
               style: TextStyle(
@@ -226,20 +207,19 @@ class _ArtistDashboardState extends State<ArtistDashboard> {
                 color: AppColors.appBarGradient.colors[0],
               ),
             ),
-            SizedBox(height: 10),
+            const SizedBox(height: 10),
             Text(
               userName.isNotEmpty ? 'Hello, $userName!' : 'Manage your art and bookings',
-              style: TextStyle(fontSize: 16, color: Colors.grey[700]),
+              style: const TextStyle(fontSize: 16, color: Colors.grey),
             ),
-            SizedBox(height: 30),
+            const SizedBox(height: 30),
             ElevatedButton(
-              onPressed: () {
-              },
+              onPressed: () {},
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.appBarGradient.colors[0],
-                padding: EdgeInsets.symmetric(horizontal: 30, vertical: 15),
+                padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
               ),
-              child: Text('View My Artworks'),
+              child: const Text('View My Artworks'),
             ),
           ],
         ),
