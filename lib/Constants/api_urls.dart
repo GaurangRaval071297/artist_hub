@@ -1,6 +1,6 @@
 class ApiUrls {
   //static const String baseUrl = "https://prakrutitech.xyz/gaurang/";
-  static const String baseUrl = "http://192.168.29.207/artist_hub_api/";
+  static const String baseUrl = "http://10.125.54.104/artist_hub_api/";
   //192.168.29.207
 
   // Auth

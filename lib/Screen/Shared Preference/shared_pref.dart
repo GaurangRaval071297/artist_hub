@@ -1,6 +1,7 @@
 import 'package:shared_preferences/shared_preferences.dart';
 
 class SharedPreferencesService {
+  // Existing keys
   static const String _isLoggedInKey = 'isLoggedIn';
   static const String _userIdKey = 'userId';
   static const String _userNameKey = 'userName';
@@ -11,6 +12,10 @@ class SharedPreferencesService {
   static const String _userPhoneKey = 'userPhone';
   static const String _userAddressKey = 'userAddress';
   static const String _rememberMeKey = 'rememberMe';
+
+  // New key for introduction screen
+  static const String _isFirstLaunchKey = 'isFirstLaunch';
+
   static SharedPreferences? _preferences;
   static bool _isInitialized = false;
 
@@ -18,6 +23,7 @@ class SharedPreferencesService {
     _preferences = await SharedPreferences.getInstance();
     _isInitialized = true;
   }
+
 
   static SharedPreferences _getPrefs() {
     if (!_isInitialized || _preferences == null) {
@@ -27,6 +33,40 @@ class SharedPreferencesService {
   }
 
   static bool get isInitialized => _isInitialized;
+
+  // ==================== INTRODUCTION SCREEN METHODS ====================
+
+  /// Check if it's the first app launch
+  static bool isFirstLaunch() {
+    try {
+      return _getPrefs().getBool(_isFirstLaunchKey) ?? true;
+    } catch (e) {
+      print('Error checking first launch: $e');
+      return true; // Default to true if error
+    }
+  }
+
+  /// Mark introduction as completed (not first launch anymore)
+  static Future<void> completeFirstLaunch() async {
+    try {
+      await _getPrefs().setBool(_isFirstLaunchKey, false);
+      print('First launch marked as completed');
+    } catch (e) {
+      print('Error completing first launch: $e');
+    }
+  }
+
+  /// Reset first launch (for testing/debugging purposes)
+  static Future<void> resetFirstLaunch() async {
+    try {
+      await _getPrefs().setBool(_isFirstLaunchKey, true);
+      print('First launch reset to true');
+    } catch (e) {
+      print('Error resetting first launch: $e');
+    }
+  }
+
+  // ==================== EXISTING METHODS (WITH MINOR UPDATES) ====================
 
   static Future<void> setLoggedIn(bool value) async {
     await _getPrefs().setBool(_isLoggedInKey, value);
@@ -262,6 +302,7 @@ class SharedPreferencesService {
   static void printAllData() {
     try {
       print('=== SharedPreferences Data ===');
+      print('isFirstLaunch: ${isFirstLaunch()}');
       print('isLoggedIn: ${isLoggedIn()}');
       print('userId: ${getUserId()}');
       print('userName: ${getUserName()}');

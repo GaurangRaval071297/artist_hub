@@ -5,7 +5,6 @@ import 'package:artist_hub/Screen/Auth/Register.dart';
 import 'package:artist_hub/Services/api_services.dart';
 import 'package:artist_hub/Widgets/Common%20Textfields/common_textfields.dart';
 import 'package:gradient_borders/box_borders/gradient_box_border.dart';
-import 'package:google_sign_in/google_sign_in.dart';
 import '../../Models/register_model.dart';
 import '../Dashboard/Artist Dashboard/artist_dashboard.dart';
 import '../Dashboard/Customer Dashboard/customer dashboard.dart';
@@ -23,15 +22,12 @@ class _LoginState extends State<Login> {
   TextEditingController password = TextEditingController();
   bool _obscurePassword = true;
   bool _isLoading = false;
-  bool _isGoogleLoading = false;
   String? _selectedRole;
   final List<String> _roles = ['artist', 'customer'];
-  late final GoogleSignIn _googleSignIn;
 
   @override
   void initState() {
     super.initState();
-    _googleSignIn = GoogleSignIn(scopes: ['email', 'profile']);
     _loadSavedUserData();
   }
 
@@ -81,109 +77,6 @@ class _LoginState extends State<Login> {
         ],
       ),
     );
-  }
-
-  Future<void> signInWithGoogle() async {
-    print("=== GOOGLE SIGN IN STARTED ===");
-    print("Selected Role: $_selectedRole");
-
-    if (_selectedRole == null) {
-      showAlert("Please select a role (Artist or Customer)");
-      return;
-    }
-
-    setState(() {
-      _isGoogleLoading = true;
-    });
-
-    try {
-      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
-      if (googleUser == null) {
-        print("Google sign in cancelled by user");
-        setState(() {
-          _isGoogleLoading = false;
-        });
-        showAlert("Google sign in cancelled");
-        return;
-      }
-
-      print("=== GOOGLE USER DATA ===");
-      print("User ID: ${googleUser.id}");
-      print("Display Name: ${googleUser.displayName}");
-      print("Email: ${googleUser.email}");
-      print("Photo URL: ${googleUser.photoUrl}");
-      print("=========================");
-
-      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
-
-      Map<String, dynamic> userData = {
-        'id': googleUser.id,
-        'name': googleUser.displayName ?? '',
-        'email': googleUser.email,
-        'role': _selectedRole,
-        'profile_pic': googleUser.photoUrl ?? '',
-        'provider': 'google',
-        'phone': '',
-        'address': '',
-      };
-
-      print("=== USER DATA TO SAVE ===");
-      userData.forEach((key, value) {
-        print("$key: $value");
-      });
-      print("=========================");
-
-      await SharedPreferencesService.saveUserData(userData);
-
-      print("=== AFTER SAVING TO SHARED PREFERENCES ===");
-      SharedPreferencesService.printAllData();
-
-      setState(() {
-        _isGoogleLoading = false;
-      });
-
-      print("Google Login Successful! Navigating...");
-      showAlert("Google Login Successful!");
-
-      await Future.delayed(const Duration(milliseconds: 1500));
-      Navigator.of(context, rootNavigator: true).pop();
-
-      if (_selectedRole == 'artist') {
-        print("Navigating to Artist Dashboard");
-        Navigator.pushAndRemoveUntil(
-          context,
-          MaterialPageRoute(builder: (context) => const ArtistDashboard()),
-              (route) => false,
-        );
-      } else {
-        print("Navigating to Customer Dashboard");
-        Navigator.pushAndRemoveUntil(
-          context,
-          MaterialPageRoute(builder: (context) => const CustomerDashboard()),
-              (route) => false,
-        );
-      }
-    } catch (e) {
-      setState(() {
-        _isGoogleLoading = false;
-      });
-      print("=== GOOGLE SIGN IN ERROR ===");
-      print("Error Type: ${e.runtimeType}");
-      print("Error Message: ${e.toString()}");
-      print("============================");
-
-      String errorMessage = "Google login failed";
-      if (e.toString().contains('sign_in_failed')) {
-        errorMessage = "Google Sign-In failed. Please check your Google Play Services.";
-      } else if (e.toString().contains('network_error')) {
-        errorMessage = "Network error. Please check your internet connection.";
-      } else if (e.toString().contains('developer_error')) {
-        errorMessage = "Developer error. App not configured for Google Sign-In.";
-      } else if (e.toString().contains('PlatformException')) {
-        errorMessage = "Platform error. Please try again.";
-      }
-      showAlert("$errorMessage\n\nError details: ${e.toString()}");
-    }
   }
 
   void validateLogin() async {
@@ -577,70 +470,6 @@ class _LoginState extends State<Login> {
                                 fontSize: 16,
                                 fontWeight: FontWeight.bold,
                               ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 25),
-                        Row(
-                          children: [
-                            Expanded(child: Divider(color: Colors.grey[300])),
-                            Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 10),
-                              child: Text(
-                                'Or continue with',
-                                style: TextStyle(color: Colors.grey[600]),
-                              ),
-                            ),
-                            Expanded(child: Divider(color: Colors.grey[300])),
-                          ],
-                        ),
-                        const SizedBox(height: 25),
-                        Container(
-                          height: 50,
-                          width: double.infinity,
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(25),
-                            border: Border.all(color: Colors.grey[300]!, width: 1),
-                            color: Colors.white,
-                          ),
-                          child: ElevatedButton(
-                            onPressed: _isGoogleLoading ? null : signInWithGoogle,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.white,
-                              foregroundColor: Colors.black,
-                              shadowColor: Colors.transparent,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(25),
-                              ),
-                              elevation: 0,
-                            ),
-                            child: _isGoogleLoading
-                                ? SizedBox(
-                              height: 20,
-                              width: 20,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                valueColor:
-                                const AlwaysStoppedAnimation<Color>(Colors.blue),
-                              ),
-                            )
-                                : Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(
-                                  Icons.g_mobiledata,
-                                  size: 24,
-                                  color: Colors.red,
-                                ),
-                                const SizedBox(width: 10),
-                                Text(
-                                  'Continue with Google',
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                              ],
                             ),
                           ),
                         ),

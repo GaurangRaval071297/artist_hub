@@ -7,6 +7,8 @@ import 'package:artist_hub/Screen/Dashboard/Artist Dashboard/artist_dashboard.da
 import 'package:artist_hub/Screen/Dashboard/Customer Dashboard/customer dashboard.dart';
 import 'package:artist_hub/Screen/Shared Preference/shared_pref.dart';
 
+import '../Intro/intro_screen.dart';
+
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
 
@@ -27,12 +29,28 @@ class _SplashScreenState extends State<SplashScreen> {
   Future<void> _initializeApp() async {
     try {
       await Future.delayed(const Duration(seconds: 2));
+
+      // Check if it's first launch
+      if (SharedPreferencesService.isFirstLaunch()) {
+        print("First launch detected - showing introduction screen");
+        if (mounted) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const IntroductionScreen()),
+          );
+        }
+        return;
+      }
+
+      // Not first launch - continue with normal flow
       setState(() {
         _statusMessage = 'Checking connectivity...';
       });
+
       final connectivityResult = await Connectivity().checkConnectivity();
       final hasInternet = connectivityResult.contains(ConnectivityResult.mobile) ||
           connectivityResult.contains(ConnectivityResult.wifi);
+
       if (!hasInternet) {
         if (mounted) {
           Navigator.pushReplacement(
@@ -42,16 +60,20 @@ class _SplashScreenState extends State<SplashScreen> {
         }
         return;
       }
+
       setState(() {
         _statusMessage = 'Checking login status...';
       });
+
       if (!SharedPreferencesService.isInitialized) {
         await SharedPreferencesService.init();
       }
+
       bool isLoggedIn = SharedPreferencesService.isLoggedIn();
       if (isLoggedIn) {
         String userRole = SharedPreferencesService.getUserRole().toLowerCase();
         String userName = SharedPreferencesService.getUserName();
+
         if (mounted) {
           await Future.delayed(const Duration(milliseconds: 500));
           if (userRole == 'artist') {
@@ -75,6 +97,7 @@ class _SplashScreenState extends State<SplashScreen> {
         }
       }
     } catch (e) {
+      print("Splash screen error: $e");
       if (mounted) {
         Navigator.pushReplacement(
           context,

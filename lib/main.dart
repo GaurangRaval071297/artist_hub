@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
-import 'Screen/Shared Preference/shared_pref.dart';
-import 'Screen/Splash Screen/splash_screen.dart';
+import 'package:artist_hub/Screen/Shared Preference/shared_pref.dart';
+import 'package:artist_hub/Screen/Splash Screen/splash_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   try {
     await SharedPreferencesService.init();
+    SharedPreferencesService.printAllData();
   } catch (e) {
     print('Error initializing SharedPreferences: $e');
   }
@@ -14,6 +15,7 @@ void main() async {
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -23,7 +25,7 @@ class MyApp extends StatelessWidget {
         primarySwatch: Colors.deepPurple,
         visualDensity: VisualDensity.adaptivePlatformDensity,
       ),
-      home: const SplashScreen(),
+      home: const SplashScreen(), // Direct splash screen
     );
   }
 }
