@@ -1,14 +1,16 @@
 import 'dart:convert';
 import 'dart:io';
-import 'package:artist_hub/Constants/api_urls.dart';
-import 'package:artist_hub/Screen/Auth/Login.dart';
-import 'package:artist_hub/Services/api_services.dart';
+import 'package:artist_hub/auth/login_screen.dart';
 import 'package:flutter/material.dart';
-import 'package:artist_hub/Constants/app_colors.dart';
-import 'package:gradient_borders/box_borders/gradient_box_border.dart';
+import 'package:http/http.dart' as http;
+import '../Shared/Constants/api_urls.dart';
+import '../Shared/Constants/app_colors.dart';
 import 'package:image_picker/image_picker.dart';
-import '../../Models/register_model.dart';
-import '../../Widgets/Common Textfields/common_textfields.dart';
+import 'package:gradient_borders/gradient_borders.dart';
+import 'package:artist_hub/Shared/widgets/common_textfields/common_textfields.dart';
+import 'package:artist_hub/shared/constants/custom_dialog.dart';
+
+import '../models/register_model.dart';
 
 class Register extends StatefulWidget {
   const Register({super.key});
@@ -27,129 +29,153 @@ class _RegisterState extends State<Register> {
 
   // Store both display value and API value
   String selectedRoleDisplay = "Customer";
-  String selectedRoleApi = "customer"; // Default lowercase for API
+  String selectedRoleApi = "customer";
   List<String> roles = ["Customer", "Artist"];
-
-  final List<RegisterModel> _register = [];
-
   bool _password = true;
   bool _confirmPassword = true;
   File? selectedImage;
   bool _isLoading = false;
 
-  void showAlert(String msg) {
+  void showAlert(String title, String message, {bool isSuccess = false}) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text("Alert", textAlign: TextAlign.center),
-        content: Text(msg, textAlign: TextAlign.center),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text("OK"),
-          ),
-        ],
+      barrierDismissible: false,
+      builder: (context) => CustomAlertDialog(
+        title: title,
+        message: message,
+        icon: isSuccess
+            ? Icons.check_circle_outline
+            : Icons.warning_amber_rounded,
+        isSuccess: isSuccess,
+        onPressed: () => Navigator.pop(context),
       ),
     );
   }
 
   void validateFields() {
     if (name_Controller.text.isEmpty) {
-      showAlert("Please Enter Name");
+      showAlert("Alert", "Please Enter Name");
     } else if (email_Controller.text.isEmpty) {
-      showAlert("Please Enter Email");
+      showAlert("Alert", "Please Enter Email");
     } else if (!RegExp(
       r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
     ).hasMatch(email_Controller.text)) {
-      showAlert("Please Enter Valid Email");
+      showAlert("Alert", "Please Enter Valid Email");
     } else if (password_Controller.text.isEmpty) {
-      showAlert("Please Enter Password");
+      showAlert("Alert", "Please Enter Password");
     } else if (password_Controller.text.length < 6) {
-      showAlert("Password must be at least 6 characters");
+      showAlert("Alert", "Password must be at least 6 characters");
     } else if (confmPassword_Controller.text.isEmpty) {
-      showAlert("Please Enter Confirm Password");
+      showAlert("Alert", "Please Enter Confirm Password");
     } else if (password_Controller.text != confmPassword_Controller.text) {
-      showAlert("Password & Confirm Password Do Not Match");
+      showAlert("Alert", "Password & Confirm Password Do Not Match");
     } else if (phone_Controller.text.isEmpty) {
-      showAlert("Please Enter Mobile Number");
+      showAlert("Alert", "Please Enter Mobile Number");
     } else if (!RegExp(r'^[0-9]{10}$').hasMatch(phone_Controller.text)) {
-      showAlert("Please Enter Valid 10-digit Phone Number");
+      showAlert("Alert", "Please Enter Valid 10-digit Phone Number");
     } else if (address_Controller.text.isEmpty) {
-      showAlert("Please Enter Address");
+      showAlert("Alert", "Please Enter Address");
     } else if (selectedRoleDisplay.isEmpty) {
-      showAlert("Please Select Role");
+      showAlert("Alert", "Please Select Role");
     } else if (selectedImage == null) {
-      showAlert("Please Select Profile Image");
+      showAlert("Alert", "Please Select Profile Image");
     } else {
-      registerUser();
+      _registerUser();
     }
   }
 
-  Future<void> registerUser() async {
+  void _registerUser() async {
     setState(() {
       _isLoading = true;
     });
 
-    Map<String, String> data = {
-      "name": name_Controller.text.trim(),
-      "email": email_Controller.text.trim(),
-      "password": password_Controller.text,
-      "phone": phone_Controller.text.trim(),
-      "address": address_Controller.text.trim(),
-      "role": selectedRoleApi, // Send lowercase role
-    };
-
-    print("Sending registration data:");
-    print("Role sent to API: $selectedRoleApi");
-
     try {
-      var response = await ApiServices.multipartApi(
-        url: ApiUrls.registerUrl,
-        fields: data,
-        file: selectedImage,
-        fileField: "profile_pic",
-      );
+      final url = Uri.parse(ApiUrls.registerUrl);
+      final request = http.MultipartRequest('POST', url); // Renamed to 'request'
 
-      print("API Response: ${json.encode(response)}");
+      // Add text fields
+      request.fields['name'] = name_Controller.text.trim();
+      request.fields['email'] = email_Controller.text.trim();
+      request.fields['password'] = password_Controller.text.trim();
+      request.fields['phone'] = phone_Controller.text.trim();
+      request.fields['address'] = address_Controller.text.trim();
+      request.fields['role'] = selectedRoleApi;
 
-      RegisterModel registerModel = RegisterModel.fromJson(response);
-
-      if (registerModel.status == true) {
-        if (registerModel.user?.role == "artist") {
-          if (registerModel.user?.artistId != null &&
-              registerModel.user?.artistId != 0) {
-            showAlert(
-              "Artist Registration Successful!\nArtist ID: ${registerModel.user?.artistId}",
-            );
-          } else {
-            showAlert(
-              "Artist Registration Successful!\nNote: Artist ID will be assigned.",
-            );
-          }
-        } else {
-          showAlert("Registration Successful!");
-        }
-
-        Future.delayed(Duration(seconds: 2), () {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (context) => Login()),
-          );
-        });
-      } else {
-        showAlert(
-          registerModel.message ?? "Registration failed. Please try again.",
+      // Add image file if selected
+      if (selectedImage != null) {
+        // Correct way to add multipart file
+        request.files.add(
+          await http.MultipartFile.fromPath(
+            'profile_pic', // Field name for image in API
+            selectedImage!.path,
+          ),
         );
       }
-    } catch (e) {
-      print("Registration Error: $e");
-      showAlert(
-        "Registration failed. Please check your internet connection and try again.",
-      );
-    } finally {
+
+      print('Sending registration request...');
+      print('Name: ${name_Controller.text}');
+      print('Email: ${email_Controller.text}');
+      print('Role: $selectedRoleApi');
+      print('Image selected: ${selectedImage != null}');
+
+      // Send request and get response
+      final streamedResponse = await request.send();
+      final response = await http.Response.fromStream(streamedResponse);
+
+      print('API Response Status: ${response.statusCode}');
+      print('API Response Body: ${response.body}');
+
       setState(() {
         _isLoading = false;
       });
+
+      if (response.statusCode == 200) {
+        final responseData = jsonDecode(response.body);
+        final registerModel = RegisterModel.fromJson(responseData);
+
+        if (registerModel.status == true) {
+          // Registration successful
+          showAlert(
+            "Success",
+            registerModel.message ?? "Registration Successful!",
+            isSuccess: true,
+          );
+
+          // Save user data to SharedPreferences if available
+          if (registerModel.user != null) {
+            final user = registerModel.user!;
+            // await SharedPreferencesHelper.setUserEmail(user.email ?? email_Controller.text);
+            // await SharedPreferencesHelper.setUserType(user.role ?? selectedRoleApi);
+            // await SharedPreferencesHelper.setUserLoggedIn(true);
+            // await SharedPreferencesHelper.setUserName(user.name ?? name_Controller.text);
+            //
+            // if (user.userId != null) {
+            //   await SharedPreferencesHelper.setUserId(user.userId.toString());
+            // }
+          }
+
+          // Navigate to login screen after 2 seconds
+          Future.delayed(const Duration(seconds: 2), () {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => const LoginScreen()),
+            );
+          });
+
+        } else {
+          // Registration failed
+          showAlert("Error", registerModel.message ?? "Registration failed");
+        }
+      } else {
+        // Server error
+        showAlert("Error", "Server error: ${response.statusCode}");
+      }
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+      });
+      print('Registration Error: $e');
+      showAlert("Error", "Network error: $e");
     }
   }
 
@@ -158,7 +184,7 @@ class _RegisterState extends State<Register> {
       context: context,
       builder: (context) {
         return Container(
-          padding: EdgeInsets.all(16),
+          padding: const EdgeInsets.all(16),
           child: Wrap(
             children: [
               ListTile(
@@ -170,9 +196,9 @@ class _RegisterState extends State<Register> {
                       end: Alignment.centerRight,
                     ).createShader(bounds);
                   },
-                  child: Icon(Icons.camera_alt, color: Colors.white),
+                  child: const Icon(Icons.camera_alt, color: Colors.white),
                 ),
-                title: Text("Camera"),
+                title: const Text("Camera"),
                 onTap: () {
                   Navigator.pop(context);
                   pickImage(ImageSource.camera);
@@ -187,9 +213,9 @@ class _RegisterState extends State<Register> {
                       end: Alignment.centerRight,
                     ).createShader(bounds);
                   },
-                  child: Icon(Icons.photo, color: Colors.white),
+                  child: const Icon(Icons.photo, color: Colors.white),
                 ),
-                title: Text("Gallery"),
+                title: const Text("Gallery"),
                 onTap: () {
                   Navigator.pop(context);
                   pickImage(ImageSource.gallery);
@@ -217,7 +243,7 @@ class _RegisterState extends State<Register> {
         });
       }
     } catch (e) {
-      showAlert("Failed to pick image: $e");
+      showAlert("Error", "Failed to pick image: $e");
     }
   }
 
@@ -241,10 +267,10 @@ class _RegisterState extends State<Register> {
               children: [
                 // Header Section
                 Container(
-                  padding: EdgeInsets.all(20),
+                  padding: const EdgeInsets.all(20),
                   child: Column(
                     children: [
-                      SizedBox(height: 30),
+                      const SizedBox(height: 30),
                       Text(
                         "Create Account",
                         style: TextStyle(
@@ -253,7 +279,7 @@ class _RegisterState extends State<Register> {
                           color: Colors.white,
                         ),
                       ),
-                      SizedBox(height: 10),
+                      const SizedBox(height: 10),
                       Text(
                         "Fill in your details to get started",
                         style: TextStyle(
@@ -270,7 +296,7 @@ class _RegisterState extends State<Register> {
                   width: double.infinity,
                   decoration: BoxDecoration(
                     color: Colors.white,
-                    borderRadius: BorderRadius.only(
+                    borderRadius: const BorderRadius.only(
                       topLeft: Radius.circular(30),
                       topRight: Radius.circular(30),
                     ),
@@ -279,7 +305,7 @@ class _RegisterState extends State<Register> {
                     padding: const EdgeInsets.all(20.0),
                     child: Column(
                       children: [
-                        SizedBox(height: 20),
+                        const SizedBox(height: 20),
 
                         // Profile Image
                         Stack(
@@ -293,11 +319,12 @@ class _RegisterState extends State<Register> {
                                 border: GradientBoxBorder(
                                   gradient: LinearGradient(
                                     colors: [
-                                      AppColors.appBarGradient.colors[0].withOpacity(0.9),
-                                      AppColors.appBarGradient.colors[1].withOpacity(0.7),
+                                      AppColors.appBarGradient.colors[0]
+                                          .withOpacity(0.9),
+                                      AppColors.appBarGradient.colors[1]
+                                          .withOpacity(0.7),
                                     ],
                                   ),
-                                  //color: AppColors.primaryColor,
                                   width: 2,
                                 ),
                               ),
@@ -327,13 +354,14 @@ class _RegisterState extends State<Register> {
                                     shape: BoxShape.circle,
                                     gradient: LinearGradient(
                                       colors: [
-                                        AppColors.appBarGradient.colors[0].withOpacity(0.9),
-                                        AppColors.appBarGradient.colors[1].withOpacity(0.7),
+                                        AppColors.appBarGradient.colors[0]
+                                            .withOpacity(0.9),
+                                        AppColors.appBarGradient.colors[1]
+                                            .withOpacity(0.7),
                                       ],
                                     ),
-                                    //color: AppColors.primaryColor,
                                   ),
-                                  child: Icon(
+                                  child: const Icon(
                                     Icons.camera_alt,
                                     size: 20,
                                     color: Colors.white,
@@ -343,7 +371,7 @@ class _RegisterState extends State<Register> {
                             ),
                           ],
                         ),
-                        SizedBox(height: 5),
+                        const SizedBox(height: 5),
                         Text(
                           "Add Profile Photo (Required)",
                           style: TextStyle(
@@ -351,7 +379,7 @@ class _RegisterState extends State<Register> {
                             fontSize: 12,
                           ),
                         ),
-                        SizedBox(height: 30),
+                        const SizedBox(height: 30),
 
                         // Form Fields Container
                         Container(
@@ -378,7 +406,7 @@ class _RegisterState extends State<Register> {
                                     color: Colors.grey[600],
                                   ),
                                 ),
-                                SizedBox(height: 15),
+                                const SizedBox(height: 15),
 
                                 // Email Field
                                 CommonTextfields(
@@ -386,12 +414,12 @@ class _RegisterState extends State<Register> {
                                   controller: email_Controller,
                                   hintText: 'Email Address',
                                   inputAction: TextInputAction.next,
-                                  preFixIcon: Icon(
+                                  preFixIcon: const Icon(
                                     Icons.email_outlined,
                                     color: AppColors.grey600,
                                   ),
                                 ),
-                                SizedBox(height: 15),
+                                const SizedBox(height: 15),
 
                                 // Password Field
                                 CommonTextfields(
@@ -400,7 +428,7 @@ class _RegisterState extends State<Register> {
                                   hintText: 'Password',
                                   obsureText: _password,
                                   inputAction: TextInputAction.next,
-                                  preFixIcon: Icon(
+                                  preFixIcon: const Icon(
                                     Icons.lock_outline,
                                     color: AppColors.grey600,
                                   ),
@@ -416,7 +444,7 @@ class _RegisterState extends State<Register> {
                                     }),
                                   ),
                                 ),
-                                SizedBox(height: 15),
+                                const SizedBox(height: 15),
 
                                 // Confirm Password Field
                                 CommonTextfields(
@@ -425,7 +453,7 @@ class _RegisterState extends State<Register> {
                                   hintText: 'Confirm Password',
                                   obsureText: _confirmPassword,
                                   inputAction: TextInputAction.next,
-                                  preFixIcon: Icon(
+                                  preFixIcon: const Icon(
                                     Icons.lock_outline,
                                     color: AppColors.grey600,
                                   ),
@@ -441,7 +469,7 @@ class _RegisterState extends State<Register> {
                                     }),
                                   ),
                                 ),
-                                SizedBox(height: 15),
+                                const SizedBox(height: 15),
 
                                 // Phone Field
                                 CommonTextfields(
@@ -450,12 +478,12 @@ class _RegisterState extends State<Register> {
                                   controller: phone_Controller,
                                   hintText: 'Phone Number',
                                   inputAction: TextInputAction.next,
-                                  preFixIcon: Icon(
+                                  preFixIcon: const Icon(
                                     Icons.phone_outlined,
                                     color: AppColors.grey600,
                                   ),
                                 ),
-                                SizedBox(height: 15),
+                                const SizedBox(height: 15),
 
                                 // Address Field
                                 CommonTextfields(
@@ -463,12 +491,12 @@ class _RegisterState extends State<Register> {
                                   controller: address_Controller,
                                   hintText: 'Address',
                                   inputAction: TextInputAction.next,
-                                  preFixIcon: Icon(
+                                  preFixIcon: const Icon(
                                     Icons.location_on_outlined,
                                     color: AppColors.grey600,
                                   ),
                                 ),
-                                SizedBox(height: 15),
+                                const SizedBox(height: 15),
 
                                 // Role Dropdown
                                 Container(
@@ -519,12 +547,12 @@ class _RegisterState extends State<Register> {
                           ),
                         ),
 
-                        SizedBox(height: 30),
+                        const SizedBox(height: 30),
 
                         // Register Button
                         Container(
                           height: 50,
-                          width: .infinity,
+                          width: double.infinity,
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(25),
                             gradient: LinearGradient(
@@ -554,12 +582,13 @@ class _RegisterState extends State<Register> {
                                     width: 20,
                                     child: CircularProgressIndicator(
                                       strokeWidth: 2,
-                                      valueColor: AlwaysStoppedAnimation<Color>(
-                                        Colors.white,
-                                      ),
+                                      valueColor:
+                                          const AlwaysStoppedAnimation<Color>(
+                                            Colors.white,
+                                          ),
                                     ),
                                   )
-                                : Text(
+                                : const Text(
                                     'Create Account',
                                     style: TextStyle(
                                       color: Colors.white,
@@ -570,7 +599,7 @@ class _RegisterState extends State<Register> {
                           ),
                         ),
 
-                        SizedBox(height: 20),
+                        const SizedBox(height: 20),
 
                         // Login Link
                         Row(
@@ -600,15 +629,15 @@ class _RegisterState extends State<Register> {
                                 );
                               },
                               child: GestureDetector(
-                                onTap:() {
+                                onTap: () {
                                   Navigator.pushReplacement(
                                     context,
                                     MaterialPageRoute(
-                                      builder: (context) => Login(),
+                                      builder: (context) => const LoginScreen(),
                                     ),
                                   );
                                 },
-                                child: Text(
+                                child: const Text(
                                   'Login',
                                   style: TextStyle(
                                     fontWeight: FontWeight.bold,
@@ -619,7 +648,7 @@ class _RegisterState extends State<Register> {
                             ),
                           ],
                         ),
-                        SizedBox(height: 20),
+                        const SizedBox(height: 20),
                       ],
                     ),
                   ),

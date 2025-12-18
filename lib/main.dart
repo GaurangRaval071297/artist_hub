@@ -1,15 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:artist_hub/Screen/Shared Preference/shared_pref.dart';
-import 'package:artist_hub/Screen/Splash Screen/splash_screen.dart';
+import 'package:artist_hub/intro_screens/intro_screen.dart';
+import 'package:artist_hub/shared/preferences/shared_preferences.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  try {
-    await SharedPreferencesService.init();
-    SharedPreferencesService.printAllData();
-  } catch (e) {
-    print('Error initializing SharedPreferences: $e');
-  }
+  await SharedPreferencesHelper.init();
   runApp(const MyApp());
 }
 
@@ -22,10 +17,10 @@ class MyApp extends StatelessWidget {
       title: 'Artist Hub',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        primarySwatch: Colors.deepPurple,
-        visualDensity: VisualDensity.adaptivePlatformDensity,
+        primarySwatch: Colors.blue,
+        scaffoldBackgroundColor: Colors.white,
       ),
-      home: const SplashScreen(), // Direct splash screen
+      home: const IntroScreen(),
     );
   }
 }

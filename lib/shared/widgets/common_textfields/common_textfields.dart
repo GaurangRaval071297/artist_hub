@@ -11,7 +11,7 @@ class CommonTextfields extends StatelessWidget {
   final bool? readOnly;
   final Widget? preFixIcon;
   final Widget? sufFixIcon;
-  final TextInputAction? inputAction;
+  final TextInputAction? inputAction; // Change this to textInputAction
   final int? maxLines;
   final int? minLines;
 
@@ -27,7 +27,7 @@ class CommonTextfields extends StatelessWidget {
     this.preFixIcon,
     this.sufFixIcon,
     this.onTap,
-    this.inputAction,
+    this.inputAction, // Change this to textInputAction
     this.maxLines,
     this.minLines
   });
@@ -35,7 +35,7 @@ class CommonTextfields extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return TextFormField(
-      textInputAction: inputAction,
+      textInputAction: inputAction, // This should match the parameter name
       controller: controller,
       keyboardType: keyboardType,
       maxLength: maxLength,
