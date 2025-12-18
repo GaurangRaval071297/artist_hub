@@ -22,7 +22,8 @@ class _IntroScreenState extends State<IntroScreen> {
   final List<IntroPage> _introPages = [
     IntroPage(
       title: 'Welcome to Artist Hub',
-      description: 'Connect with amazing artists from around the world and discover unique talents for your projects',
+      description:
+          'Connect with amazing artists from around the world and discover unique talents for your projects',
       image: '🎨',
       color: AppColors.purplePinkGradient,
       iconColor: Colors.purple,
@@ -30,7 +31,8 @@ class _IntroScreenState extends State<IntroScreen> {
     ),
     IntroPage(
       title: 'Book Artists Instantly',
-      description: 'Easily browse, select and book artists for your events, projects, and creative needs',
+      description:
+          'Easily browse, select and book artists for your events, projects, and creative needs',
       image: '👨‍🎨',
       color: AppColors.blueGradient,
       iconColor: Colors.blue,
@@ -38,7 +40,8 @@ class _IntroScreenState extends State<IntroScreen> {
     ),
     IntroPage(
       title: 'Showcase Your Talent',
-      description: 'Artists can build stunning portfolios, get discovered, and grow their creative careers',
+      description:
+          'Artists can build stunning portfolios, get discovered, and grow their creative careers',
       image: '🌟',
       color: AppColors.appBarGradient,
       iconColor: Colors.amber,
@@ -111,6 +114,8 @@ class _IntroScreenState extends State<IntroScreen> {
   Widget build(BuildContext context) {
     final screenHeight = MediaQuery.of(context).size.height;
     final screenWidth = MediaQuery.of(context).size.width;
+    final isSmallScreen = screenHeight < 700;
+    final isVerySmallScreen = screenHeight < 600;
 
     return Scaffold(
       body: Container(
@@ -124,227 +129,279 @@ class _IntroScreenState extends State<IntroScreen> {
             end: Alignment.bottomCenter,
           ),
         ),
-        child: Stack(
-          children: [
-            // Animated background dots
-            Positioned(
-              top: screenHeight * 0.1,
-              right: screenWidth * 0.1,
-              child: _buildAnimatedDot(Colors.white.withOpacity(0.1), 80),
-            ),
-            Positioned(
-              bottom: screenHeight * 0.2,
-              left: screenWidth * 0.1,
-              child: _buildAnimatedDot(Colors.white.withOpacity(0.08), 60),
-            ),
-
-            Column(
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            return Stack(
               children: [
-                // Skip button in top right (always visible)
-                Align(
-                  alignment: Alignment.topRight,
-                  child: Padding(
-                    padding: const EdgeInsets.only(top: 40.0, right: 20.0),
-                    child: TextButton(
-                      onPressed: _skipIntro,
-                      style: TextButton.styleFrom(
-                        foregroundColor: Colors.white,
-                        backgroundColor: Colors.white.withOpacity(0.15),
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 20, vertical: 10),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(20),
-                          side: BorderSide(
-                              color: Colors.white.withOpacity(0.3), width: 1),
-                        ),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            'Skip',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.white.withOpacity(0.9),
-                            ),
-                          ),
-                          const SizedBox(width: 5),
-                          Icon(
-                            Icons.arrow_forward_rounded,
-                            size: 18,
-                            color: Colors.white.withOpacity(0.9),
-                          ),
-                        ],
-                      ),
+                // Animated background dots (remove on very small screens)
+                if (!isVerySmallScreen) ...[
+                  Positioned(
+                    top: screenHeight * 0.1,
+                    right: screenWidth * 0.1,
+                    child: _buildAnimatedDot(Colors.white.withOpacity(0.1), 60),
+                  ),
+                  Positioned(
+                    bottom: screenHeight * 0.2,
+                    left: screenWidth * 0.1,
+                    child: _buildAnimatedDot(
+                      Colors.white.withOpacity(0.08),
+                      40,
                     ),
                   ),
-                ),
+                ],
 
-                Expanded(
-                  child: PageView.builder(
-                    controller: _pageController,
-                    itemCount: _introPages.length,
-                    onPageChanged: (index) {
-                      setState(() {
-                        _currentPage = index;
-                        _animateIcon();
-                      });
-                    },
-                    itemBuilder: (context, index) {
-                      return IntroPageWidget(
-                        page: _introPages[index],
-                        iconScale: _iconScale,
-                        currentPage: _currentPage,
-                        pageIndex: index,
-                      );
-                    },
-                  ),
-                ),
-
-                // Bottom section with indicators and button
-                Padding(
-                  padding: const EdgeInsets.all(20.0),
-                  child: Column(
-                    children: [
-                      // Custom animated indicators
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: List.generate(
-                          _introPages.length,
-                              (index) => AnimatedContainer(
-                            duration: const Duration(milliseconds: 300),
-                            margin: const EdgeInsets.symmetric(horizontal: 4),
-                            width: _currentPage == index ? 24 : 8,
-                            height: 8,
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(4),
-                              color: _currentPage == index
-                                  ? Colors.white
-                                  : Colors.white.withOpacity(0.4),
-                              boxShadow: _currentPage == index
-                                  ? [
-                                BoxShadow(
-                                  color: Colors.white.withOpacity(0.5),
-                                  blurRadius: 8,
-                                  spreadRadius: 1,
-                                ),
-                              ]
-                                  : [],
+                Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Skip button in top right
+                    Container(
+                      padding: EdgeInsets.only(
+                        top:
+                            MediaQuery.of(context).padding.top +
+                            (isVerySmallScreen ? 10 : 20),
+                        right: 16,
+                      ),
+                      alignment: Alignment.topRight,
+                      child: TextButton(
+                        onPressed: _skipIntro,
+                        style: TextButton.styleFrom(
+                          foregroundColor: Colors.white,
+                          backgroundColor: Colors.white.withOpacity(0.15),
+                          padding: EdgeInsets.symmetric(
+                            horizontal: isVerySmallScreen ? 12 : 16,
+                            vertical: isVerySmallScreen ? 6 : 8,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(20),
+                            side: BorderSide(
+                              color: Colors.white.withOpacity(0.3),
+                              width: 1,
                             ),
                           ),
                         ),
-                      ),
-                      const SizedBox(height: 30),
-
-                      // Animated Get Started/Next button
-                      SizedBox(
-                        width: double.infinity,
-                        height: 55,
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 300),
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              colors: [
-                                Colors.white,
-                                Colors.white.withOpacity(0.95),
-                              ],
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              'Skip',
+                              style: TextStyle(
+                                fontSize: isVerySmallScreen ? 12 : 14,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.white.withOpacity(0.9),
+                              ),
                             ),
-                            borderRadius: BorderRadius.circular(15),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.2),
-                                blurRadius: 20,
-                                spreadRadius: 2,
-                                offset: const Offset(0, 5),
+                            const SizedBox(width: 4),
+                            Icon(
+                              Icons.arrow_forward_rounded,
+                              size: isVerySmallScreen ? 14 : 16,
+                              color: Colors.white.withOpacity(0.9),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+
+                    Expanded(
+                      child: PageView.builder(
+                        controller: _pageController,
+                        itemCount: _introPages.length,
+                        onPageChanged: (index) {
+                          setState(() {
+                            _currentPage = index;
+                            _animateIcon();
+                          });
+                        },
+                        itemBuilder: (context, index) {
+                          return IntroPageWidget(
+                            page: _introPages[index],
+                            iconScale: _iconScale,
+                            currentPage: _currentPage,
+                            pageIndex: index,
+                            isVerySmallScreen: isVerySmallScreen,
+                          );
+                        },
+                      ),
+                    ),
+
+                    // Bottom section with indicators and button
+                    Container(
+                      padding: EdgeInsets.only(
+                        bottom:
+                            MediaQuery.of(context).padding.bottom +
+                            (isVerySmallScreen ? 5 : 10),
+                        left: 16,
+                        right: 16,
+                        top: isVerySmallScreen ? 8 : 16,
+                      ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          // Custom animated indicators
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: List.generate(
+                              _introPages.length,
+                              (index) => AnimatedContainer(
+                                duration: const Duration(milliseconds: 300),
+                                margin: const EdgeInsets.symmetric(
+                                  horizontal: 3,
+                                ),
+                                width: _currentPage == index
+                                    ? (isVerySmallScreen ? 16 : 20)
+                                    : 6,
+                                height: 6,
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(3),
+                                  color: _currentPage == index
+                                      ? Colors.white
+                                      : Colors.white.withOpacity(0.4),
+                                  boxShadow: _currentPage == index
+                                      ? [
+                                          BoxShadow(
+                                            color: Colors.white.withOpacity(
+                                              0.5,
+                                            ),
+                                            blurRadius: 6,
+                                            spreadRadius: 1,
+                                          ),
+                                        ]
+                                      : [],
+                                ),
                               ),
-                              BoxShadow(
-                                color: _introPages[_currentPage]
-                                    .color
-                                    .colors[0]
-                                    .withOpacity(0.3),
-                                blurRadius: 15,
-                                spreadRadius: 1,
-                              ),
-                            ],
+                            ),
                           ),
-                          child: Material(
-                            color: Colors.transparent,
-                            child: InkWell(
-                              onTap: () async {
-                                if (_currentPage == _introPages.length - 1) {
-                                  await SharedPreferencesHelper.setFirstTime(false);
-                                  _navigateToNextScreen();
-                                } else {
-                                  _pageController.nextPage(
-                                    duration: const Duration(milliseconds: 500),
-                                    curve: Curves.easeInOut,
-                                  );
-                                }
-                              },
-                              borderRadius: BorderRadius.circular(15),
-                              child: Center(
-                                child: AnimatedSwitcher(
-                                  duration: const Duration(milliseconds: 300),
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    key: ValueKey(_currentPage),
-                                    children: [
-                                      Text(
-                                        _currentPage == _introPages.length - 1
-                                            ? 'Get Started'
-                                            : 'Next',
-                                        style: TextStyle(
-                                          fontSize: 18,
-                                          fontWeight: FontWeight.w700,
-                                          color: _introPages[_currentPage].iconColor,
-                                          letterSpacing: 0.5,
+                          SizedBox(height: isVerySmallScreen ? 10 : 15),
+
+                          // Animated Get Started/Next button
+                          SizedBox(
+                            width: double.infinity,
+                            height: isVerySmallScreen ? 44 : 50,
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 300),
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  colors: [
+                                    Colors.white,
+                                    Colors.white.withOpacity(0.95),
+                                  ],
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                ),
+                                borderRadius: BorderRadius.circular(12),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.2),
+                                    blurRadius: 15,
+                                    spreadRadius: 1,
+                                    offset: const Offset(0, 3),
+                                  ),
+                                  BoxShadow(
+                                    color: _introPages[_currentPage]
+                                        .color
+                                        .colors[0]
+                                        .withOpacity(0.3),
+                                    blurRadius: 10,
+                                    spreadRadius: 1,
+                                  ),
+                                ],
+                              ),
+                              child: Material(
+                                color: Colors.transparent,
+                                child: InkWell(
+                                  onTap: () async {
+                                    if (_currentPage ==
+                                        _introPages.length - 1) {
+                                      await SharedPreferencesHelper.setFirstTime(
+                                        false,
+                                      );
+                                      _navigateToNextScreen();
+                                    } else {
+                                      _pageController.nextPage(
+                                        duration: const Duration(
+                                          milliseconds: 500,
                                         ),
+                                        curve: Curves.easeInOut,
+                                      );
+                                    }
+                                  },
+                                  borderRadius: BorderRadius.circular(12),
+                                  child: Center(
+                                    child: AnimatedSwitcher(
+                                      duration: const Duration(
+                                        milliseconds: 300,
                                       ),
-                                      const SizedBox(width: 8),
-                                      Icon(
-                                        _currentPage == _introPages.length - 1
-                                            ? Icons.rocket_launch_rounded
-                                            : Icons.arrow_forward_ios_rounded,
-                                        size: 18,
-                                        color: _introPages[_currentPage].iconColor,
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        key: ValueKey(_currentPage),
+                                        children: [
+                                          Text(
+                                            _currentPage ==
+                                                    _introPages.length - 1
+                                                ? 'Get Started'
+                                                : 'Next',
+                                            style: TextStyle(
+                                              fontSize: isVerySmallScreen
+                                                  ? 15
+                                                  : 16,
+                                              fontWeight: FontWeight.w700,
+                                              color: _introPages[_currentPage]
+                                                  .iconColor,
+                                              letterSpacing: 0.3,
+                                            ),
+                                          ),
+                                          const SizedBox(width: 6),
+                                          Icon(
+                                            _currentPage ==
+                                                    _introPages.length - 1
+                                                ? Icons.rocket_launch_rounded
+                                                : Icons
+                                                      .arrow_forward_ios_rounded,
+                                            size: isVerySmallScreen ? 14 : 16,
+                                            color: _introPages[_currentPage]
+                                                .iconColor,
+                                          ),
+                                        ],
                                       ),
-                                    ],
+                                    ),
                                   ),
                                 ),
                               ),
                             ),
                           ),
-                        ),
-                      ),
 
-                      // Optional: Quick skip text on last page
-                      if (_currentPage == _introPages.length - 1)
-                        const SizedBox(height: 15),
-                      if (_currentPage == _introPages.length - 1)
-                        GestureDetector(
-                          onTap: _skipIntro,
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 16, vertical: 8),
-                            child: Text(
-                              'Just explore the app →',
-                              style: TextStyle(
-                                color: Colors.white.withOpacity(0.7),
-                                fontSize: 14,
-                                fontWeight: FontWeight.w500,
+                          // Optional: Quick skip text on last page (only for larger screens)
+                          if (_currentPage == _introPages.length - 1 &&
+                              !isVerySmallScreen &&
+                              screenHeight > 650)
+                            const SizedBox(height: 10),
+                          if (_currentPage == _introPages.length - 1 &&
+                              !isVerySmallScreen &&
+                              screenHeight > 650)
+                            GestureDetector(
+                              onTap: _skipIntro,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 6,
+                                ),
+                                child: Text(
+                                  'Just explore the app →',
+                                  style: TextStyle(
+                                    color: Colors.white.withOpacity(0.7),
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
                               ),
                             ),
-                          ),
-                        ),
-                    ],
-                  ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
               ],
-            ),
-          ],
+            );
+          },
         ),
       ),
     );
@@ -356,10 +413,7 @@ class _IntroScreenState extends State<IntroScreen> {
       curve: Curves.easeInOut,
       width: size,
       height: size,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        color: color,
-      ),
+      decoration: BoxDecoration(shape: BoxShape.circle, color: color),
     );
   }
 }
@@ -387,6 +441,7 @@ class IntroPageWidget extends StatelessWidget {
   final double iconScale;
   final int currentPage;
   final int pageIndex;
+  final bool isVerySmallScreen;
 
   const IntroPageWidget({
     super.key,
@@ -394,6 +449,7 @@ class IntroPageWidget extends StatelessWidget {
     required this.iconScale,
     required this.currentPage,
     required this.pageIndex,
+    required this.isVerySmallScreen,
   });
 
   @override
@@ -404,32 +460,34 @@ class IntroPageWidget extends StatelessWidget {
     return AnimatedOpacity(
       duration: const Duration(milliseconds: 300),
       opacity: isActive ? 1.0 : 0.5,
-      child: Padding(
-        padding: const EdgeInsets.all(20.0),
+      child: Container(
+        padding: const EdgeInsets.all(16.0),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
           children: [
             // Icon container with floating effect
             Stack(
               alignment: Alignment.center,
               children: [
-                // Glow effect
-                AnimatedContainer(
-                  duration: const Duration(milliseconds: 500),
-                  width: 220,
-                  height: 220,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: RadialGradient(
-                      colors: [
-                        page.color.colors[0].withOpacity(0.3),
-                        page.color.colors[1].withOpacity(0.1),
-                        Colors.transparent,
-                      ],
-                      stops: const [0.1, 0.5, 1.0],
+                // Glow effect (remove on very small screens)
+                if (!isVerySmallScreen)
+                  AnimatedContainer(
+                    duration: const Duration(milliseconds: 500),
+                    width: isVerySmallScreen ? 120 : 150,
+                    height: isVerySmallScreen ? 120 : 150,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: RadialGradient(
+                        colors: [
+                          page.color.colors[0].withOpacity(0.3),
+                          page.color.colors[1].withOpacity(0.1),
+                          Colors.transparent,
+                        ],
+                        stops: const [0.1, 0.3, 1.0],
+                      ),
                     ),
                   ),
-                ),
 
                 // Main icon container
                 AnimatedScale(
@@ -437,107 +495,108 @@ class IntroPageWidget extends StatelessWidget {
                   duration: const Duration(milliseconds: 300),
                   curve: Curves.elasticOut,
                   child: Container(
-                    width: 180,
-                    height: 180,
+                    width: isVerySmallScreen ? 100 : 130,
+                    height: isVerySmallScreen ? 100 : 130,
                     decoration: BoxDecoration(
                       gradient: page.color,
                       shape: BoxShape.circle,
                       boxShadow: [
                         BoxShadow(
-                          color: page.color.colors[0].withOpacity(0.5),
-                          blurRadius: 30,
-                          spreadRadius: 5,
-                        ),
-                        BoxShadow(
-                          color: page.color.colors[1].withOpacity(0.3),
+                          color: page.color.colors[0].withOpacity(0.4),
                           blurRadius: 20,
                           spreadRadius: 3,
-                          offset: const Offset(0, 10),
+                        ),
+                        BoxShadow(
+                          color: page.color.colors[1].withOpacity(0.2),
+                          blurRadius: 15,
+                          spreadRadius: 2,
+                          offset: const Offset(0, 5),
                         ),
                       ],
                     ),
                     child: Center(
                       child: Text(
                         page.image,
-                        style: const TextStyle(fontSize: 70),
+                        style: TextStyle(fontSize: isVerySmallScreen ? 40 : 50),
                       ),
                     ),
                   ),
                 ),
 
-                // Floating secondary icon
-                Positioned(
-                  bottom: 20,
-                  right: 20,
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 500),
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.9),
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.1),
-                          blurRadius: 10,
-                          spreadRadius: 2,
-                        ),
-                      ],
-                    ),
-                    child: Text(
-                      page.secondaryIcon,
-                      style: const TextStyle(fontSize: 24),
+                // Floating secondary icon (remove on very small screens)
+                if (!isVerySmallScreen)
+                  Positioned(
+                    bottom: 10,
+                    right: 10,
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 500),
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.9),
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.1),
+                            blurRadius: 6,
+                            spreadRadius: 1,
+                          ),
+                        ],
+                      ),
+                      child: Text(
+                        page.secondaryIcon,
+                        style: const TextStyle(fontSize: 16),
+                      ),
                     ),
                   ),
-                ),
               ],
             ),
 
-            SizedBox(height: screenHeight * 0.06),
+            SizedBox(height: isVerySmallScreen ? 20 : 30),
 
-            // Title with fade-in effect
             AnimatedOpacity(
               duration: const Duration(milliseconds: 500),
               opacity: isActive ? 1.0 : 0.3,
               child: Text(
                 page.title,
-                style: const TextStyle(
-                  fontSize: 32,
+                style: TextStyle(
+                  fontSize: isVerySmallScreen ? 22 : 26,
                   fontWeight: FontWeight.w800,
                   color: Colors.white,
                   height: 1.2,
                 ),
                 textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
               ),
             ),
 
-            const SizedBox(height: 20),
+            SizedBox(height: isVerySmallScreen ? 12 : 16),
 
             // Description with smooth animation
             AnimatedPadding(
               duration: const Duration(milliseconds: 400),
-              padding: EdgeInsets.symmetric(
-                horizontal: isActive ? 40 : 60,
-              ),
+              padding: EdgeInsets.symmetric(horizontal: isActive ? 16 : 24),
               child: Text(
                 page.description,
                 style: TextStyle(
-                  fontSize: 18,
+                  fontSize: isVerySmallScreen ? 14 : 16,
                   color: Colors.white.withOpacity(0.9),
-                  height: 1.6,
+                  height: 1.4,
                   fontWeight: FontWeight.w400,
                 ),
                 textAlign: TextAlign.center,
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
               ),
             ),
 
-            // Progress indicator at bottom of content
-            if (isActive)
+            if (isActive && !isVerySmallScreen)
               Padding(
-                padding: const EdgeInsets.only(top: 40),
+                padding: const EdgeInsets.only(top: 20),
                 child: Text(
                   '${pageIndex + 1}/${3}',
                   style: TextStyle(
-                    fontSize: 14,
+                    fontSize: 12,
                     color: Colors.white.withOpacity(0.6),
                     fontWeight: FontWeight.w500,
                   ),

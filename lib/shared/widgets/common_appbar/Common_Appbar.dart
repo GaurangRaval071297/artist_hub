@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
+import 'package:get/get_core/src/get_main.dart';
+import 'package:get/get_navigation/src/extension_navigation.dart';
 import '../../Constants/app_colors.dart';
 
 class CommonAppbar extends StatelessWidget implements PreferredSizeWidget {
@@ -65,7 +66,6 @@ class CommonAppbar extends StatelessWidget implements PreferredSizeWidget {
   }
 
   Widget _buildDefaultLeading(BuildContext context) {
-    // 🔥 FIRST TRY: Check if showDrawerIcon parameter is explicitly set
     if (showDrawerIcon == true) {
       return Builder(
         builder: (context) => IconButton(
@@ -75,7 +75,6 @@ class CommonAppbar extends StatelessWidget implements PreferredSizeWidget {
       );
     }
 
-    // 🔥 SECOND TRY: Check if it's a dashboard screen using context
     // Check if Scaffold has a drawer
     final scaffold = Scaffold.maybeOf(context);
     if (scaffold != null && scaffold.hasDrawer) {
@@ -87,7 +86,6 @@ class CommonAppbar extends StatelessWidget implements PreferredSizeWidget {
       );
     }
 
-    // 🔥 THIRD TRY: Check if we can pop (back button)
     final canPop = Navigator.canPop(context);
 
     if (canPop) {

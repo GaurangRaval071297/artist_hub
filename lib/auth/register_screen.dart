@@ -11,6 +11,7 @@ import 'package:artist_hub/Shared/widgets/common_textfields/common_textfields.da
 import 'package:artist_hub/shared/constants/custom_dialog.dart';
 
 import '../models/register_model.dart';
+import '../shared/preferences/shared_preferences.dart';
 
 class Register extends StatefulWidget {
   const Register({super.key});
@@ -91,7 +92,7 @@ class _RegisterState extends State<Register> {
 
     try {
       final url = Uri.parse(ApiUrls.registerUrl);
-      final request = http.MultipartRequest('POST', url); // Renamed to 'request'
+      final request = http.MultipartRequest('POST', url);
 
       // Add text fields
       request.fields['name'] = name_Controller.text.trim();
@@ -103,27 +104,16 @@ class _RegisterState extends State<Register> {
 
       // Add image file if selected
       if (selectedImage != null) {
-        // Correct way to add multipart file
         request.files.add(
           await http.MultipartFile.fromPath(
-            'profile_pic', // Field name for image in API
+            'profile_pic',
             selectedImage!.path,
           ),
         );
       }
 
-      print('Sending registration request...');
-      print('Name: ${name_Controller.text}');
-      print('Email: ${email_Controller.text}');
-      print('Role: $selectedRoleApi');
-      print('Image selected: ${selectedImage != null}');
-
-      // Send request and get response
       final streamedResponse = await request.send();
       final response = await http.Response.fromStream(streamedResponse);
-
-      print('API Response Status: ${response.statusCode}');
-      print('API Response Body: ${response.body}');
 
       setState(() {
         _isLoading = false;
@@ -134,21 +124,27 @@ class _RegisterState extends State<Register> {
         final registerModel = RegisterModel.fromJson(responseData);
 
         if (registerModel.status == true) {
-          // Registration successful
           showAlert(
             "Success",
             registerModel.message ?? "Registration Successful!",
             isSuccess: true,
           );
 
-          // Save user data to SharedPreferences if available
+          // Save user data to SharedPreferences
           if (registerModel.user != null) {
             final user = registerModel.user!;
-            // await SharedPreferencesHelper.setUserEmail(user.email ?? email_Controller.text);
-            // await SharedPreferencesHelper.setUserType(user.role ?? selectedRoleApi);
-            // await SharedPreferencesHelper.setUserLoggedIn(true);
-            // await SharedPreferencesHelper.setUserName(user.name ?? name_Controller.text);
-            //
+
+            await SharedPreferencesHelper.setUserEmail(user.email ?? email_Controller.text);
+            await SharedPreferencesHelper.setUserType(user.role ?? selectedRoleApi);
+            await SharedPreferencesHelper.setUserLoggedIn(true);
+            await SharedPreferencesHelper.setUserName(user.name ?? name_Controller.text);
+
+            // IMPORTANT: Save profile image URL
+            if (user.profilePic != null && user.profilePic!.isNotEmpty) {
+              await SharedPreferencesHelper.setUserProfilePic(user.profilePic!);
+              print('Profile image URL saved: ${user.profilePic}');
+            }
+
             // if (user.userId != null) {
             //   await SharedPreferencesHelper.setUserId(user.userId.toString());
             // }
@@ -163,11 +159,9 @@ class _RegisterState extends State<Register> {
           });
 
         } else {
-          // Registration failed
           showAlert("Error", registerModel.message ?? "Registration failed");
         }
       } else {
-        // Server error
         showAlert("Error", "Server error: ${response.statusCode}");
       }
     } catch (e) {

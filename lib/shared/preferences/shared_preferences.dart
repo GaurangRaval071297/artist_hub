@@ -44,4 +44,16 @@ class SharedPreferencesHelper {
     await _preferences.remove('userName');
     await _preferences.remove('userType');
   }
+
+  // Add these methods to your SharedPreferencesHelper class
+
+  static Future<void> setUserProfilePic(String profilePicUrl) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('user_profile_pic', profilePicUrl);
+  }
+
+  static Future<String?> getUserProfilePic() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString('user_profile_pic');
+  }
 }
