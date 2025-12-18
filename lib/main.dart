@@ -1,10 +1,8 @@
+import 'package:artist_hub/splash_screen/splash_screen.dart';
 import 'package:flutter/material.dart';
-import 'package:artist_hub/intro_screens/intro_screen.dart';
-import 'package:artist_hub/shared/preferences/shared_preferences.dart';
 
-void main() async {
+void main() {
   WidgetsFlutterBinding.ensureInitialized();
-  await SharedPreferencesHelper.init();
   runApp(const MyApp());
 }
 
@@ -15,12 +13,9 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Artist Hub',
+      theme: ThemeData(primarySwatch: Colors.purple, useMaterial3: true),
+      home: const SplashScreen(),
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        primarySwatch: Colors.blue,
-        scaffoldBackgroundColor: Colors.white,
-      ),
-      home: const IntroScreen(),
     );
   }
 }

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-
 import '../../Constants/app_colors.dart';
 
 class CommonAppbar extends StatelessWidget implements PreferredSizeWidget {
@@ -13,6 +12,7 @@ class CommonAppbar extends StatelessWidget implements PreferredSizeWidget {
   final double? elevation;
   final bool? automaticallyImplyLeading;
   final VoidCallback? onBackPressed;
+  final bool? showDrawerIcon; // Add this new parameter
 
   CommonAppbar({
     this.title,
@@ -24,6 +24,7 @@ class CommonAppbar extends StatelessWidget implements PreferredSizeWidget {
     this.elevation,
     this.automaticallyImplyLeading,
     this.onBackPressed,
+    this.showDrawerIcon, // Add this
   });
 
   @override
@@ -64,9 +65,8 @@ class CommonAppbar extends StatelessWidget implements PreferredSizeWidget {
   }
 
   Widget _buildDefaultLeading(BuildContext context) {
-    // For dashboard screens, show menu icon
-    final currentRoute = Get.currentRoute;
-    if (currentRoute.contains('dashboard')) {
+    // 🔥 FIRST TRY: Check if showDrawerIcon parameter is explicitly set
+    if (showDrawerIcon == true) {
       return Builder(
         builder: (context) => IconButton(
           icon: const Icon(Icons.menu, color: Colors.white),
@@ -75,7 +75,19 @@ class CommonAppbar extends StatelessWidget implements PreferredSizeWidget {
       );
     }
 
-    // Check if we can pop
+    // 🔥 SECOND TRY: Check if it's a dashboard screen using context
+    // Check if Scaffold has a drawer
+    final scaffold = Scaffold.maybeOf(context);
+    if (scaffold != null && scaffold.hasDrawer) {
+      return Builder(
+        builder: (context) => IconButton(
+          icon: const Icon(Icons.menu, color: Colors.white),
+          onPressed: () => Scaffold.of(context).openDrawer(),
+        ),
+      );
+    }
+
+    // 🔥 THIRD TRY: Check if we can pop (back button)
     final canPop = Navigator.canPop(context);
 
     if (canPop) {

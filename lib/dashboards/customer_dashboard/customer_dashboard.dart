@@ -15,6 +15,9 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
       appBar: CommonAppbar(
         title: 'Customer_Dashboard',
       ),
+      body: Center(
+        child: Text(''),
+      ),
     );
   }
 }

@@ -79,12 +79,6 @@ class _LoginScreenState extends State<LoginScreen> {
       _isLoading = true;
     });
 
-    // Save data
-    // await SharedPreferencesHelper.setUserEmail(_emailController.text);
-    // await SharedPreferencesHelper.setUserType(_selectedRole!);
-    // await SharedPreferencesHelper.setUserLoggedIn(true);
-    // await SharedPreferencesHelper.setUserName('John Doe');
-
     try {
       final url = Uri.parse(ApiUrls.loginUrl);
       final response = await http.post(
@@ -104,6 +98,11 @@ class _LoginScreenState extends State<LoginScreen> {
         final loginModel = LoginModel.fromJson(responseData);
 
         if (loginModel.status == true) {
+          await SharedPreferencesHelper.init();
+          await SharedPreferencesHelper.setUserLoggedIn(true);
+          await SharedPreferencesHelper.setUserEmail(_emailController.text);
+          await SharedPreferencesHelper.setUserType(_selectedRole!);
+
           if (_selectedRole == 'artist') {
             Navigator.pushReplacement(
               context,
