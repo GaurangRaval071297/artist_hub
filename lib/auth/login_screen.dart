@@ -144,7 +144,7 @@ class _LoginScreenState extends State<LoginScreen> {
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 12),
         child: DropdownButtonFormField<String>(
-          value: _selectedRole,
+          initialValue: _selectedRole,
           onChanged: (String? newValue) {
             setState(() {
               _selectedRole = newValue;

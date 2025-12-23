@@ -21,12 +21,12 @@ class Register extends StatefulWidget {
 }
 
 class _RegisterState extends State<Register> {
-  TextEditingController name_Controller = TextEditingController();
-  TextEditingController email_Controller = TextEditingController();
-  TextEditingController password_Controller = TextEditingController();
-  TextEditingController confmPassword_Controller = TextEditingController();
-  TextEditingController phone_Controller = TextEditingController();
-  TextEditingController address_Controller = TextEditingController();
+  TextEditingController nameController = TextEditingController();
+  TextEditingController emailController = TextEditingController();
+  TextEditingController passwordController = TextEditingController();
+  TextEditingController confirmPasswordController = TextEditingController();
+  TextEditingController phoneController = TextEditingController();
+  TextEditingController addressController = TextEditingController();
 
   // Store both display value and API value
   String selectedRoleDisplay = "Customer";
@@ -34,7 +34,6 @@ class _RegisterState extends State<Register> {
   List<String> roles = ["Customer", "Artist"];
   bool _password = true;
   bool _confirmPassword = true;
-  File? selectedImage;
   bool _isLoading = false;
 
   void showAlert(String title, String message, {bool isSuccess = false}) {
@@ -54,32 +53,30 @@ class _RegisterState extends State<Register> {
   }
 
   void validateFields() {
-    if (name_Controller.text.isEmpty) {
+    if (nameController.text.isEmpty) {
       showAlert("Alert", "Please Enter Name");
-    } else if (email_Controller.text.isEmpty) {
+    } else if (emailController.text.isEmpty) {
       showAlert("Alert", "Please Enter Email");
     } else if (!RegExp(
       r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
-    ).hasMatch(email_Controller.text)) {
+    ).hasMatch(emailController.text)) {
       showAlert("Alert", "Please Enter Valid Email");
-    } else if (password_Controller.text.isEmpty) {
+    } else if (passwordController.text.isEmpty) {
       showAlert("Alert", "Please Enter Password");
-    } else if (password_Controller.text.length < 6) {
+    } else if (passwordController.text.length < 6) {
       showAlert("Alert", "Password must be at least 6 characters");
-    } else if (confmPassword_Controller.text.isEmpty) {
+    } else if (confirmPasswordController.text.isEmpty) {
       showAlert("Alert", "Please Enter Confirm Password");
-    } else if (password_Controller.text != confmPassword_Controller.text) {
+    } else if (passwordController.text != confirmPasswordController.text) {
       showAlert("Alert", "Password & Confirm Password Do Not Match");
-    } else if (phone_Controller.text.isEmpty) {
+    } else if (phoneController.text.isEmpty) {
       showAlert("Alert", "Please Enter Mobile Number");
-    } else if (!RegExp(r'^[0-9]{10}$').hasMatch(phone_Controller.text)) {
+    } else if (!RegExp(r'^[0-9]{10}$').hasMatch(phoneController.text)) {
       showAlert("Alert", "Please Enter Valid 10-digit Phone Number");
-    } else if (address_Controller.text.isEmpty) {
+    } else if (addressController.text.isEmpty) {
       showAlert("Alert", "Please Enter Address");
     } else if (selectedRoleDisplay.isEmpty) {
       showAlert("Alert", "Please Select Role");
-    } else if (selectedImage == null) {
-      showAlert("Alert", "Please Select Profile Image");
     } else {
       _registerUser();
     }
@@ -95,22 +92,12 @@ class _RegisterState extends State<Register> {
       final request = http.MultipartRequest('POST', url);
 
       // Add text fields
-      request.fields['name'] = name_Controller.text.trim();
-      request.fields['email'] = email_Controller.text.trim();
-      request.fields['password'] = password_Controller.text.trim();
-      request.fields['phone'] = phone_Controller.text.trim();
-      request.fields['address'] = address_Controller.text.trim();
+      request.fields['name'] = nameController.text.trim();
+      request.fields['email'] = emailController.text.trim();
+      request.fields['password'] = passwordController.text.trim();
+      request.fields['phone'] = phoneController.text.trim();
+      request.fields['address'] = addressController.text.trim();
       request.fields['role'] = selectedRoleApi;
-
-      // Add image file if selected
-      if (selectedImage != null) {
-        request.files.add(
-          await http.MultipartFile.fromPath(
-            'profile_pic',
-            selectedImage!.path,
-          ),
-        );
-      }
 
       final streamedResponse = await request.send();
       final response = await http.Response.fromStream(streamedResponse);
@@ -134,20 +121,21 @@ class _RegisterState extends State<Register> {
           if (registerModel.user != null) {
             final user = registerModel.user!;
 
-            await SharedPreferencesHelper.setUserEmail(user.email ?? email_Controller.text);
-            await SharedPreferencesHelper.setUserType(user.role ?? selectedRoleApi);
+            await SharedPreferencesHelper.setUserEmail(
+              user.email ?? emailController.text,
+            );
+            await SharedPreferencesHelper.setUserType(
+              user.role ?? selectedRoleApi,
+            );
             await SharedPreferencesHelper.setUserLoggedIn(true);
-            await SharedPreferencesHelper.setUserName(user.name ?? name_Controller.text);
+            await SharedPreferencesHelper.setUserName(
+              user.name ?? nameController.text,
+            );
 
-            // IMPORTANT: Save profile image URL
+            // Save profile image URL if provided by server
             if (user.profilePic != null && user.profilePic!.isNotEmpty) {
               await SharedPreferencesHelper.setUserProfilePic(user.profilePic!);
-              print('Profile image URL saved: ${user.profilePic}');
             }
-
-            // if (user.userId != null) {
-            //   await SharedPreferencesHelper.setUserId(user.userId.toString());
-            // }
           }
 
           // Navigate to login screen after 2 seconds
@@ -157,7 +145,6 @@ class _RegisterState extends State<Register> {
               MaterialPageRoute(builder: (context) => const LoginScreen()),
             );
           });
-
         } else {
           showAlert("Error", registerModel.message ?? "Registration failed");
         }
@@ -170,74 +157,6 @@ class _RegisterState extends State<Register> {
       });
       print('Registration Error: $e');
       showAlert("Error", "Network error: $e");
-    }
-  }
-
-  void showImagePickerOptions() {
-    showModalBottomSheet(
-      context: context,
-      builder: (context) {
-        return Container(
-          padding: const EdgeInsets.all(16),
-          child: Wrap(
-            children: [
-              ListTile(
-                leading: ShaderMask(
-                  shaderCallback: (Rect bounds) {
-                    return LinearGradient(
-                      colors: AppColors.appBarGradient.colors,
-                      begin: Alignment.centerLeft,
-                      end: Alignment.centerRight,
-                    ).createShader(bounds);
-                  },
-                  child: const Icon(Icons.camera_alt, color: Colors.white),
-                ),
-                title: const Text("Camera"),
-                onTap: () {
-                  Navigator.pop(context);
-                  pickImage(ImageSource.camera);
-                },
-              ),
-              ListTile(
-                leading: ShaderMask(
-                  shaderCallback: (Rect bounds) {
-                    return LinearGradient(
-                      colors: AppColors.appBarGradient.colors,
-                      begin: Alignment.centerLeft,
-                      end: Alignment.centerRight,
-                    ).createShader(bounds);
-                  },
-                  child: const Icon(Icons.photo, color: Colors.white),
-                ),
-                title: const Text("Gallery"),
-                onTap: () {
-                  Navigator.pop(context);
-                  pickImage(ImageSource.gallery);
-                },
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  void pickImage(ImageSource source) async {
-    try {
-      final picked = await ImagePicker().pickImage(
-        source: source,
-        maxWidth: 800,
-        maxHeight: 800,
-        imageQuality: 85,
-      );
-
-      if (picked != null) {
-        setState(() {
-          selectedImage = File(picked.path);
-        });
-      }
-    } catch (e) {
-      showAlert("Error", "Failed to pick image: $e");
     }
   }
 
@@ -299,81 +218,7 @@ class _RegisterState extends State<Register> {
                     padding: const EdgeInsets.all(20.0),
                     child: Column(
                       children: [
-                        const SizedBox(height: 20),
-
-                        // Profile Image
-                        Stack(
-                          children: [
-                            Container(
-                              width: 100,
-                              height: 100,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: Colors.grey[200],
-                                border: GradientBoxBorder(
-                                  gradient: LinearGradient(
-                                    colors: [
-                                      AppColors.appBarGradient.colors[0]
-                                          .withOpacity(0.9),
-                                      AppColors.appBarGradient.colors[1]
-                                          .withOpacity(0.7),
-                                    ],
-                                  ),
-                                  width: 2,
-                                ),
-                              ),
-                              child: ClipOval(
-                                child: selectedImage != null
-                                    ? Image.file(
-                                        selectedImage!,
-                                        fit: BoxFit.cover,
-                                        width: 100,
-                                        height: 100,
-                                      )
-                                    : Icon(
-                                        Icons.person,
-                                        size: 50,
-                                        color: Colors.grey[500],
-                                      ),
-                              ),
-                            ),
-                            Positioned(
-                              bottom: 0,
-                              right: 0,
-                              child: GestureDetector(
-                                onTap: showImagePickerOptions,
-                                child: Container(
-                                  padding: const EdgeInsets.all(8),
-                                  decoration: BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    gradient: LinearGradient(
-                                      colors: [
-                                        AppColors.appBarGradient.colors[0]
-                                            .withOpacity(0.9),
-                                        AppColors.appBarGradient.colors[1]
-                                            .withOpacity(0.7),
-                                      ],
-                                    ),
-                                  ),
-                                  child: const Icon(
-                                    Icons.camera_alt,
-                                    size: 20,
-                                    color: Colors.white,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 5),
-                        Text(
-                          "Add Profile Photo (Required)",
-                          style: TextStyle(
-                            color: Colors.grey[600],
-                            fontSize: 12,
-                          ),
-                        ),
-                        const SizedBox(height: 30),
+                        const SizedBox(height: 40),
 
                         // Form Fields Container
                         Container(
@@ -392,7 +237,7 @@ class _RegisterState extends State<Register> {
                                 // Name Field
                                 CommonTextfields(
                                   keyboardType: TextInputType.name,
-                                  controller: name_Controller,
+                                  controller: nameController,
                                   hintText: 'Full Name',
                                   inputAction: TextInputAction.next,
                                   preFixIcon: Icon(
@@ -405,7 +250,7 @@ class _RegisterState extends State<Register> {
                                 // Email Field
                                 CommonTextfields(
                                   keyboardType: TextInputType.emailAddress,
-                                  controller: email_Controller,
+                                  controller: emailController,
                                   hintText: 'Email Address',
                                   inputAction: TextInputAction.next,
                                   preFixIcon: const Icon(
@@ -418,7 +263,7 @@ class _RegisterState extends State<Register> {
                                 // Password Field
                                 CommonTextfields(
                                   keyboardType: TextInputType.visiblePassword,
-                                  controller: password_Controller,
+                                  controller: passwordController,
                                   hintText: 'Password',
                                   obsureText: _password,
                                   inputAction: TextInputAction.next,
@@ -443,7 +288,7 @@ class _RegisterState extends State<Register> {
                                 // Confirm Password Field
                                 CommonTextfields(
                                   keyboardType: TextInputType.visiblePassword,
-                                  controller: confmPassword_Controller,
+                                  controller: confirmPasswordController,
                                   hintText: 'Confirm Password',
                                   obsureText: _confirmPassword,
                                   inputAction: TextInputAction.next,
@@ -469,7 +314,7 @@ class _RegisterState extends State<Register> {
                                 CommonTextfields(
                                   keyboardType: TextInputType.phone,
                                   maxLength: 10,
-                                  controller: phone_Controller,
+                                  controller: phoneController,
                                   hintText: 'Phone Number',
                                   inputAction: TextInputAction.next,
                                   preFixIcon: const Icon(
@@ -482,7 +327,7 @@ class _RegisterState extends State<Register> {
                                 // Address Field
                                 CommonTextfields(
                                   keyboardType: TextInputType.streetAddress,
-                                  controller: address_Controller,
+                                  controller: addressController,
                                   hintText: 'Address',
                                   inputAction: TextInputAction.next,
                                   preFixIcon: const Icon(

@@ -15,7 +15,8 @@ class CommonAppbar extends StatelessWidget implements PreferredSizeWidget {
   final VoidCallback? onBackPressed;
   final bool? showDrawerIcon; // Add this new parameter
 
-  CommonAppbar({
+  const CommonAppbar({
+    super.key,
     this.title,
     this.centerTitle,
     this.actions,
@@ -36,13 +37,13 @@ class CommonAppbar extends StatelessWidget implements PreferredSizeWidget {
     return AppBar(
       title: title != null
           ? Text(
-        title!,
-        style: const TextStyle(
-          fontSize: 20,
-          fontWeight: FontWeight.w600,
-          color: Colors.white,
-        ),
-      )
+              title!,
+              style: const TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.w600,
+                color: Colors.white,
+              ),
+            )
           : null,
       centerTitle: centerTitle ?? true,
       actions: actions,
