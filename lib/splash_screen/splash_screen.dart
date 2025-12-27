@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:artist_hub/providers/auth_provider.dart';
 import 'package:artist_hub/auth/login_screen.dart';
 import 'package:artist_hub/shared/constants/app_colors.dart';
 import 'package:artist_hub/shared/preferences/shared_preferences.dart';
-
 import '../dashboards/artist_dashboard/artist_dashboard.dart';
 import '../dashboards/customer_dashboard/customer_dashboard.dart';
 import '../intro_screens/intro_screen.dart';
@@ -75,9 +76,26 @@ class _SplashScreenState extends State<SplashScreen>
     // Check if it's first time
     final isFirstTime = SharedPreferencesHelper.isFirstTime;
 
-    // Check login status
+    // Check login status from SharedPreferences
     final isLoggedIn = SharedPreferencesHelper.isUserLoggedIn;
     final userType = SharedPreferencesHelper.userType;
+    final userId = SharedPreferencesHelper.userId;
+    final userEmail = SharedPreferencesHelper.userEmail;
+    final userName = SharedPreferencesHelper.userName;
+
+    // Initialize AuthProvider with saved data
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+
+      if (isLoggedIn) {
+        authProvider.login(
+          userId: userId,
+          userType: userType,
+          userEmail: userEmail,
+          userName: userName,
+        );
+      }
+    });
 
     // Navigate based on conditions
     Widget nextScreen;
@@ -88,7 +106,13 @@ class _SplashScreenState extends State<SplashScreen>
       nextScreen = const LoginScreen();
     } else {
       if (userType == 'artist') {
-        nextScreen = const ArtistDashboard();
+        if (userId.isNotEmpty) {
+          print("UserId from SharedPref: $userId");
+          nextScreen = ArtistDashboard(id: userId);
+        } else {
+          print('Warning: Artist logged in but no user ID found');
+          nextScreen = const LoginScreen();
+        }
       } else {
         nextScreen = const CustomerDashboard();
       }

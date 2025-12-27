@@ -23,9 +23,19 @@ class ApiUrls {
   static const String deleteArtistProfileUrl = "${baseUrl}delete_artist_profile.php";
   static const String viewArtistProfileUrl = "${baseUrl}view_artist_profile.php";
 
+  // Artist Media
+  static const String addArtistMediaUrl = "${baseUrl}add_artist_media.php";
+  static const String viewArtistMediaByIdUrl = "${baseUrl}view_artist_media_by_id.php";
+
+
   // User Endpoints
   static const String getUserProfileUrl = "${baseUrl}get_user_profile.php";
   static const String updateProfileUrl = "${baseUrl}update_profile.php";
+
+  // Like Endpoints
+  static const String toggleLikeUrl = "${baseUrl}like.php"; // POST
+  static const String viewLikeUrl = "${baseUrl}view_like.php"; // GET
+
 
   // Other Endpoints
   static const String forgotPasswordUrl = "${baseUrl}forgot_password.php";

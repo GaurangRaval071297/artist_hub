@@ -29,7 +29,7 @@ class AppMessages {
   static const String validatePhone = "Please enter a valid 10-digit phone number";
   static const String validateAddress = "Please enter your address";
   static const String validateRole = "Please select a role";
-  static const String validateImage = "Please select a profile image";
+  static const String validateImage = "Please select a post image";
 
   // Info Messages
   static const String infoLoading = "Loading...";

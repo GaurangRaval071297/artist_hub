@@ -7,7 +7,8 @@ import '../dashboards/artist_dashboard/artist_dashboard.dart';
 import '../dashboards/customer_dashboard/customer_dashboard.dart';
 
 class IntroScreen extends StatefulWidget {
-  const IntroScreen({super.key});
+  final String? id;
+  const IntroScreen({this.id,super.key});
 
   @override
   State<IntroScreen> createState() => _IntroScreenState();
@@ -93,7 +94,7 @@ class _IntroScreenState extends State<IntroScreen> {
         context,
         MaterialPageRoute(
           builder: (context) => userType == 'artist'
-              ? const ArtistDashboard()
+              ? ArtistDashboard(id: widget.id,)
               : const CustomerDashboard(),
         ),
       );

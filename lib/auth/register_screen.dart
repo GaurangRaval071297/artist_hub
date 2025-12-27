@@ -1,17 +1,15 @@
 import 'dart:convert';
-import 'dart:io';
-import 'package:artist_hub/auth/login_screen.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:http/http.dart' as http;
-import '../Shared/Constants/api_urls.dart';
-import '../Shared/Constants/app_colors.dart';
-import 'package:image_picker/image_picker.dart';
-import 'package:gradient_borders/gradient_borders.dart';
-import 'package:artist_hub/Shared/widgets/common_textfields/common_textfields.dart';
+import 'package:artist_hub/providers/auth_provider.dart';
+import 'package:artist_hub/auth/login_screen.dart';
+import 'package:artist_hub/shared/constants/api_urls.dart';
+import 'package:artist_hub/shared/constants/app_colors.dart';
 import 'package:artist_hub/shared/constants/custom_dialog.dart';
-
-import '../models/register_model.dart';
-import '../shared/preferences/shared_preferences.dart';
+import 'package:artist_hub/models/register_model.dart';
+import 'package:artist_hub/shared/preferences/shared_preferences.dart';
+import '../shared/widgets/common_textfields/common_textfields.dart';
 
 class Register extends StatefulWidget {
   const Register({super.key});
@@ -28,7 +26,6 @@ class _RegisterState extends State<Register> {
   TextEditingController phoneController = TextEditingController();
   TextEditingController addressController = TextEditingController();
 
-  // Store both display value and API value
   String selectedRoleDisplay = "Customer";
   String selectedRoleApi = "customer";
   List<String> roles = ["Customer", "Artist"];
@@ -111,32 +108,34 @@ class _RegisterState extends State<Register> {
         final registerModel = RegisterModel.fromJson(responseData);
 
         if (registerModel.status == true) {
+          // Save to AuthProvider
+          final authProvider = Provider.of<AuthProvider>(context, listen: false);
+          authProvider.login(
+            userId: registerModel.user?.userId?.toString() ?? '',
+            userType: selectedRoleApi,
+            userEmail: emailController.text,
+            userName: nameController.text,
+            userPhone: phoneController.text,
+            userAddress: addressController.text,
+          );
+
+          // Save to SharedPreferences
+          await SharedPreferencesHelper.setUserEmail(emailController.text);
+          await SharedPreferencesHelper.setUserType(selectedRoleApi);
+          await SharedPreferencesHelper.setUserLoggedIn(true);
+          await SharedPreferencesHelper.setUserName(nameController.text);
+          await SharedPreferencesHelper.setUserPhone(phoneController.text);
+          await SharedPreferencesHelper.setUserAddress(addressController.text);
+
+          if (registerModel.user?.userId != null) {
+            await SharedPreferencesHelper.setUserId(registerModel.user!.userId.toString());
+          }
+
           showAlert(
             "Success",
             registerModel.message ?? "Registration Successful!",
             isSuccess: true,
           );
-
-          // Save user data to SharedPreferences
-          if (registerModel.user != null) {
-            final user = registerModel.user!;
-
-            await SharedPreferencesHelper.setUserEmail(
-              user.email ?? emailController.text,
-            );
-            await SharedPreferencesHelper.setUserType(
-              user.role ?? selectedRoleApi,
-            );
-            await SharedPreferencesHelper.setUserLoggedIn(true);
-            await SharedPreferencesHelper.setUserName(
-              user.name ?? nameController.text,
-            );
-
-            // Save profile image URL if provided by server
-            if (user.profilePic != null && user.profilePic!.isNotEmpty) {
-              await SharedPreferencesHelper.setUserProfilePic(user.profilePic!);
-            }
-          }
 
           // Navigate to login screen after 2 seconds
           Future.delayed(const Duration(seconds: 2), () {
@@ -366,15 +365,7 @@ class _RegisterState extends State<Register> {
                                         onChanged: (value) {
                                           setState(() {
                                             selectedRoleDisplay = value!;
-                                            // Convert to lowercase for API
-                                            selectedRoleApi = value
-                                                .toLowerCase();
-                                            print(
-                                              "Selected role (display): $selectedRoleDisplay",
-                                            );
-                                            print(
-                                              "Selected role (API): $selectedRoleApi",
-                                            );
+                                            selectedRoleApi = value.toLowerCase();
                                           });
                                         },
                                       ),
@@ -396,12 +387,8 @@ class _RegisterState extends State<Register> {
                             borderRadius: BorderRadius.circular(25),
                             gradient: LinearGradient(
                               colors: [
-                                AppColors.appBarGradient.colors[0].withOpacity(
-                                  0.9,
-                                ),
-                                AppColors.appBarGradient.colors[1].withOpacity(
-                                  0.7,
-                                ),
+                                AppColors.appBarGradient.colors[0].withOpacity(0.9),
+                                AppColors.appBarGradient.colors[1].withOpacity(0.7),
                               ],
                             ),
                           ),
@@ -417,24 +404,24 @@ class _RegisterState extends State<Register> {
                             ),
                             child: _isLoading
                                 ? SizedBox(
-                                    height: 20,
-                                    width: 20,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                      valueColor:
-                                          const AlwaysStoppedAnimation<Color>(
-                                            Colors.white,
-                                          ),
-                                    ),
-                                  )
+                              height: 20,
+                              width: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                valueColor:
+                                const AlwaysStoppedAnimation<Color>(
+                                  Colors.white,
+                                ),
+                              ),
+                            )
                                 : const Text(
-                                    'Create Account',
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
+                              'Create Account',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
                           ),
                         ),
 

@@ -1,15 +1,16 @@
 import 'dart:convert';
-
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:http/http.dart' as http;
+import 'package:artist_hub/providers/auth_provider.dart';
 import 'package:artist_hub/dashboards/artist_dashboard/artist_dashboard.dart';
 import 'package:artist_hub/models/login_model.dart';
 import 'package:artist_hub/shared/constants/api_urls.dart';
-import 'package:flutter/material.dart';
-import 'package:artist_hub/auth/register_screen.dart';
 import 'package:artist_hub/shared/constants/app_colors.dart';
 import 'package:artist_hub/shared/constants/app_messages.dart';
 import 'package:artist_hub/shared/constants/custom_dialog.dart';
 import 'package:artist_hub/shared/preferences/shared_preferences.dart';
-import 'package:http/http.dart' as http;
+import 'package:artist_hub/auth/register_screen.dart';
 import '../dashboards/customer_dashboard/customer_dashboard.dart';
 import '../shared/widgets/common_textfields/common_textfields.dart';
 
@@ -29,12 +30,30 @@ class _LoginScreenState extends State<LoginScreen> {
   String? _selectedRole;
   final List<String> _roles = ['artist', 'customer'];
 
-  void validateLogin() {
-    print("=== VALIDATE LOGIN ===");
-    print("Email: ${_emailController.text}");
-    print("Password: ${_passwordController.text}");
-    print("Selected Role: $_selectedRole");
+  @override
+  void initState() {
+    super.initState();
+    // Auto-fill email if remembered
+    _emailController.text = SharedPreferencesHelper.userEmail;
+  }
 
+  void showAlert(String title, String message, {bool isSuccess = false}) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => CustomAlertDialog(
+        title: title,
+        message: message,
+        icon: isSuccess
+            ? Icons.check_circle_outline
+            : Icons.warning_amber_rounded,
+        isSuccess: isSuccess,
+        onPressed: () => Navigator.pop(context),
+      ),
+    );
+  }
+
+  void validateLogin() {
     if (_selectedRole == null) {
       showAlert('Alert', 'Please Select Role');
       return;
@@ -56,22 +75,6 @@ class _LoginScreenState extends State<LoginScreen> {
     } else {
       _login();
     }
-  }
-
-  void showAlert(String title, String message, {bool isSuccess = false}) {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => CustomAlertDialog(
-        title: title,
-        message: message,
-        icon: isSuccess
-            ? Icons.check_circle_outline
-            : Icons.warning_amber_rounded,
-        isSuccess: isSuccess,
-        onPressed: () => Navigator.pop(context),
-      ),
-    );
   }
 
   void _login() async {
@@ -102,11 +105,43 @@ class _LoginScreenState extends State<LoginScreen> {
           await SharedPreferencesHelper.setUserLoggedIn(true);
           await SharedPreferencesHelper.setUserEmail(_emailController.text);
           await SharedPreferencesHelper.setUserType(_selectedRole!);
+          await SharedPreferencesHelper.setUserPhone(
+            loginModel.user?.phone ?? '',
+          );
+          await SharedPreferencesHelper.setUserAddress(
+            loginModel.user?.address ?? '',
+          );
+
+          if (loginModel.user != null && loginModel.user!.id != null) {
+            await SharedPreferencesHelper.setUserId(
+              loginModel.user!.id.toString(),
+            );
+            await SharedPreferencesHelper.setUserName(
+              loginModel.user!.name ?? '',
+            );
+            await SharedPreferencesHelper.setUserProfilePic('');
+          }
+
+          final authProvider = Provider.of<AuthProvider>(
+            context,
+            listen: false,
+          );
+          authProvider.login(
+            userId: loginModel.user?.id?.toString() ?? '',
+            userType: _selectedRole!,
+            userEmail: _emailController.text,
+            userName: loginModel.user?.name ?? '',
+            userPhone: loginModel.user?.phone ?? '',
+            userAddress: loginModel.user?.address ?? '',
+          );
 
           if (_selectedRole == 'artist') {
             Navigator.pushReplacement(
               context,
-              MaterialPageRoute(builder: (context) => ArtistDashboard()),
+              MaterialPageRoute(
+                builder: (context) =>
+                    ArtistDashboard(id: loginModel.user!.id.toString()),
+              ),
             );
           } else if (_selectedRole == 'customer') {
             Navigator.pushReplacement(
@@ -114,11 +149,15 @@ class _LoginScreenState extends State<LoginScreen> {
               MaterialPageRoute(builder: (context) => CustomerDashboard()),
             );
           }
-          showAlert(
-            'Success',
-            loginModel.message ?? 'Login Successful',
-            isSuccess: true,
-          );
+
+          // 4. Show success message
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            showAlert(
+              'Success',
+              loginModel.message ?? 'Login Successful',
+              isSuccess: true,
+            );
+          });
         } else {
           showAlert('Error', loginModel.message ?? 'Login failed');
         }
@@ -144,7 +183,7 @@ class _LoginScreenState extends State<LoginScreen> {
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 12),
         child: DropdownButtonFormField<String>(
-          initialValue: _selectedRole,
+          value: _selectedRole,
           onChanged: (String? newValue) {
             setState(() {
               _selectedRole = newValue;
@@ -294,6 +333,8 @@ class _LoginScreenState extends State<LoginScreen> {
                                   // Role Selection
                                   _buildRoleDropdown(),
                                   SizedBox(height: isSmallScreen ? 15 : 20),
+
+                                  // Email Field
                                   CommonTextfields(
                                     keyboardType: TextInputType.emailAddress,
                                     controller: _emailController,

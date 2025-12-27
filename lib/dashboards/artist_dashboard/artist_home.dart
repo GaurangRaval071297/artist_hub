@@ -3,7 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:get/get_connect/http/src/utils/utils.dart';
 
 class ArtistHome extends StatefulWidget {
-  const ArtistHome({super.key});
+  final String id;
+  const ArtistHome({required this.id,super.key});
 
   @override
   State<ArtistHome> createState() => _ArtistHomeState();

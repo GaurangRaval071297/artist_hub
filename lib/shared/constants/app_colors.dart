@@ -6,6 +6,7 @@ class AppColors {
   static const Color primary = Color(0xFF0066FF);
   static const Color secondary = Color(0xFFFF9800);
   static const Color accent = Color(0xFFE91E63);
+  static const Color red = Colors.red;
 
   // White and Grey shades
   static const Color white = Colors.white;
