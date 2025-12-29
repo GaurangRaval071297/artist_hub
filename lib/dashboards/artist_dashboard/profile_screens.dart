@@ -9,6 +9,7 @@ import 'package:artist_hub/shared/constants/custom_dialog.dart';
 import 'package:artist_hub/shared/preferences/shared_preferences.dart';
 import 'package:intl/intl.dart';
 import 'package:http/http.dart' as http;
+import 'package:video_player/video_player.dart';
 import 'add_post_screens.dart';
 
 class ProfileScreens extends StatefulWidget {
@@ -27,7 +28,9 @@ class _ProfileScreensState extends State<ProfileScreens> {
   bool _isEditing = false;
   bool _isLoading = false;
 
-  // Followers and Following counts removed
+  // Video player controller
+  VideoPlayerController? _videoController;
+  bool _isVideoInitialized = false;
 
   @override
   void initState() {
@@ -36,6 +39,18 @@ class _ProfileScreensState extends State<ProfileScreens> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _fetchArtistPosts();
     });
+  }
+
+  @override
+  void dispose() {
+    _disposeVideoPlayer();
+    super.dispose();
+  }
+
+  void _disposeVideoPlayer() {
+    _videoController?.dispose();
+    _videoController = null;
+    _isVideoInitialized = false;
   }
 
   void _loadDataFromSharedPreferences() async {
@@ -132,7 +147,6 @@ class _ProfileScreensState extends State<ProfileScreens> {
     }
   }
 
-  // Get likes for a post
   Future<Map<String, dynamic>> getLikesForPost(String postId) async {
     try {
       final response = await http.get(
@@ -153,7 +167,6 @@ class _ProfileScreensState extends State<ProfileScreens> {
     return {'status': false, 'data': [], 'message': 'Network error'};
   }
 
-  // Toggle like for a post
   Future<Map<String, dynamic>> toggleLike(String postId, String userId) async {
     try {
       final response = await http.post(
@@ -176,6 +189,29 @@ class _ProfileScreensState extends State<ProfileScreens> {
     }
 
     return {'status': false, 'message': 'Network error'};
+  }
+
+  // Initialize video player
+  Future<void> _initializeVideoPlayer(String videoUrl) async {
+    _disposeVideoPlayer();
+
+    try {
+      _videoController = videoUrl.startsWith('http')
+          ? VideoPlayerController.network(videoUrl)
+          : VideoPlayerController.file(File(videoUrl));
+
+      await _videoController!.initialize();
+
+      // Start playing automatically
+      _videoController!.play();
+
+      setState(() {
+        _isVideoInitialized = true;
+      });
+    } catch (e) {
+      debugPrint('Error initializing video player: $e');
+      showAlert('Error', 'Failed to load video: $e');
+    }
   }
 
   @override
@@ -272,11 +308,9 @@ class _ProfileScreensState extends State<ProfileScreens> {
 
               SizedBox(width: 20),
 
-              // Only Posts count is shown, followers and following removed
               Expanded(
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
-                  // Centered the posts count
                   children: [
                     _buildStatColumn(
                       count: postProvider.posts.length.toString(),
@@ -521,61 +555,128 @@ class _ProfileScreensState extends State<ProfileScreens> {
       );
     }
 
-    if (post.mediaUrl.startsWith('http')) {
-      return Image.network(
-        post.mediaUrl,
-        fit: BoxFit.cover,
-        loadingBuilder: (context, child, loadingProgress) {
-          if (loadingProgress == null) return child;
-          return Center(
-            child: CircularProgressIndicator(
-              strokeWidth: 2,
-              valueColor: AlwaysStoppedAnimation(Colors.white),
-            ),
-          );
-        },
-        errorBuilder: (context, error, stackTrace) {
-          debugPrint('Image error: $error for URL: ${post.mediaUrl}');
-          return Container(
-            color: Colors.grey[800],
-            child: Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.broken_image, size: 40, color: Colors.grey[500]),
-                  SizedBox(height: 8),
-                  Text(
-                    'Failed to load',
-                    style: TextStyle(color: Colors.grey[500], fontSize: 12),
-                  ),
-                ],
+    if (post.mediaType == 'video') {
+      // Video thumbnail with play button overlay
+      return Container(
+        color: Colors.black,
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            if (post.mediaUrl.startsWith('http'))
+              Image.network(
+                'https://img.youtube.com/vi/${_extractYouTubeId(post.mediaUrl)}/hqdefault.jpg',
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) {
+                  return Container(
+                    color: Colors.grey[800],
+                    child: Center(
+                      child: Icon(Icons.videocam, color: Colors.grey[500]),
+                    ),
+                  );
+                },
+              )
+            else if (File(post.mediaUrl).existsSync())
+              Image.file(File(post.mediaUrl), fit: BoxFit.cover)
+            else
+              Container(
+                color: Colors.grey[800],
+                child: Center(
+                  child: Icon(Icons.videocam, color: Colors.grey[500]),
+                ),
+              ),
+
+            // Play button overlay
+            Center(
+              child: Container(
+                width: 50,
+                height: 50,
+                decoration: BoxDecoration(
+                  color: Colors.black.withOpacity(0.5),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(Icons.play_arrow, size: 30, color: Colors.white),
               ),
             ),
-          );
-        },
+          ],
+        ),
       );
     } else {
-      try {
-        return Image.file(
-          File(post.mediaUrl),
+      // Image
+      if (post.mediaUrl.startsWith('http')) {
+        return Image.network(
+          post.mediaUrl,
           fit: BoxFit.cover,
+          loadingBuilder: (context, child, loadingProgress) {
+            if (loadingProgress == null) return child;
+            return Center(
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                valueColor: AlwaysStoppedAnimation(Colors.white),
+              ),
+            );
+          },
           errorBuilder: (context, error, stackTrace) {
+            debugPrint('Image error: $error for URL: ${post.mediaUrl}');
             return Container(
               color: Colors.grey[800],
-              child: Center(child: Icon(Icons.image, color: Colors.grey[500])),
+              child: Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.broken_image, size: 40, color: Colors.grey[500]),
+                    SizedBox(height: 8),
+                    Text(
+                      'Failed to load',
+                      style: TextStyle(color: Colors.grey[500], fontSize: 12),
+                    ),
+                  ],
+                ),
+              ),
             );
           },
         );
-      } catch (e) {
-        return Container(
-          color: Colors.grey[800],
-          child: Center(child: Icon(Icons.image, color: Colors.grey[500])),
-        );
+      } else {
+        try {
+          return Image.file(
+            File(post.mediaUrl),
+            fit: BoxFit.cover,
+            errorBuilder: (context, error, stackTrace) {
+              return Container(
+                color: Colors.grey[800],
+                child: Center(
+                  child: Icon(Icons.image, color: Colors.grey[500]),
+                ),
+              );
+            },
+          );
+        } catch (e) {
+          return Container(
+            color: Colors.grey[800],
+            child: Center(child: Icon(Icons.image, color: Colors.grey[500])),
+          );
+        }
       }
     }
   }
 
+  String? _extractYouTubeId(String url) {
+    final regExp = RegExp(
+      r'^.*((youtu.be\/)|(v\/)|(\/u\/\w\/)|(embed\/)|(watch\?))\??v?=?([^#&?]*).*',
+    );
+    final match = regExp.firstMatch(url);
+    return (match != null && match.group(7)!.length == 11)
+        ? match.group(7)
+        : null;
+  }
+
   void _showPostDetail(Post post, AuthProvider authProvider) {
+    if (post.mediaType == 'video') {
+      // Initialize video player when opening video post
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _initializeVideoPlayer(post.mediaUrl);
+      });
+    }
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -585,6 +686,7 @@ class _ProfileScreensState extends State<ProfileScreens> {
           builder: (context, setState) {
             bool localIsLiked = post.isLiked;
             int localLikeCount = post.likeCount;
+            bool isPlaying = _videoController?.value.isPlaying ?? false;
 
             void handleLike() async {
               final postProvider = Provider.of<PostProvider>(
@@ -592,7 +694,6 @@ class _ProfileScreensState extends State<ProfileScreens> {
                 listen: false,
               );
 
-              // Optimistically update UI
               final wasLiked = localIsLiked;
               final oldLikeCount = localLikeCount;
 
@@ -603,7 +704,6 @@ class _ProfileScreensState extends State<ProfileScreens> {
                     : localLikeCount - 1;
               });
 
-              // Update in provider
               postProvider.updatePostLike(
                 post.id,
                 localLikeCount,
@@ -615,11 +715,9 @@ class _ProfileScreensState extends State<ProfileScreens> {
                           .toList(),
               );
 
-              // Call API
               final result = await toggleLike(post.id, authProvider.userId);
 
               if (result['status'] == false) {
-                // Revert if API fails
                 setState(() {
                   localIsLiked = wasLiked;
                   localLikeCount = oldLikeCount;
@@ -636,13 +734,25 @@ class _ProfileScreensState extends State<ProfileScreens> {
                             .toList(),
                 );
 
-                // Show error
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
                     content: Text(result['message'] ?? 'Failed to update like'),
                     backgroundColor: Colors.red,
                   ),
                 );
+              }
+            }
+
+            void toggleVideoPlayback() {
+              if (_videoController != null) {
+                if (_videoController!.value.isPlaying) {
+                  _videoController!.pause();
+                } else {
+                  _videoController!.play();
+                }
+                setState(() {
+                  isPlaying = _videoController!.value.isPlaying;
+                });
               }
             }
 
@@ -676,7 +786,10 @@ class _ProfileScreensState extends State<ProfileScreens> {
                         ),
                         IconButton(
                           icon: Icon(Icons.close),
-                          onPressed: () => Navigator.pop(context),
+                          onPressed: () {
+                            _disposeVideoPlayer();
+                            Navigator.pop(context);
+                          },
                         ),
                       ],
                     ),
@@ -691,20 +804,9 @@ class _ProfileScreensState extends State<ProfileScreens> {
                             width: double.infinity,
                             color: Colors.black,
                             child: post.mediaType == 'video'
-                                ? Column(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Icon(
-                                        Icons.videocam,
-                                        size: 60,
-                                        color: Colors.white,
-                                      ),
-                                      SizedBox(height: 10),
-                                      Text(
-                                        'Video Content',
-                                        style: TextStyle(color: Colors.white),
-                                      ),
-                                    ],
+                                ? _buildVideoPlayer(
+                                    toggleVideoPlayback,
+                                    isPlaying,
                                   )
                                 : post.mediaUrl.startsWith('http')
                                 ? Image.network(
@@ -805,7 +907,6 @@ class _ProfileScreensState extends State<ProfileScreens> {
 
                                 Row(
                                   children: [
-                                    // Like Button
                                     GestureDetector(
                                       onTap: handleLike,
                                       child: Row(
@@ -833,10 +934,9 @@ class _ProfileScreensState extends State<ProfileScreens> {
 
                                     SizedBox(width: 20),
 
-                                    // Comment Button
                                     GestureDetector(
                                       onTap: () {
-                                        // Add comment functionality here
+                                        // Comment functionality
                                       },
                                       child: Row(
                                         children: [
@@ -859,10 +959,9 @@ class _ProfileScreensState extends State<ProfileScreens> {
 
                                     SizedBox(width: 20),
 
-                                    // Share Button
                                     GestureDetector(
                                       onTap: () {
-                                        // Add share functionality here
+                                        // Share functionality
                                       },
                                       child: Row(
                                         children: [
@@ -885,7 +984,6 @@ class _ProfileScreensState extends State<ProfileScreens> {
 
                                     Spacer(),
 
-                                    // View Likes Button
                                     if (localLikeCount > 0)
                                       TextButton(
                                         onPressed: () {
@@ -914,7 +1012,131 @@ class _ProfileScreensState extends State<ProfileScreens> {
           },
         );
       },
-    );
+    ).then((_) {
+      // Dispose video player when bottom sheet is closed
+      _disposeVideoPlayer();
+    });
+  }
+
+  Widget _buildVideoPlayer(VoidCallback onPlayPause, bool isPlaying) {
+    if (_isVideoInitialized && _videoController != null) {
+      return Stack(
+        fit: StackFit.expand,
+        children: [
+          AspectRatio(
+            aspectRatio: _videoController!.value.aspectRatio,
+            child: VideoPlayer(_videoController!),
+          ),
+
+          // Custom play/pause button overlay
+          Positioned.fill(
+            child: GestureDetector(
+              onTap: onPlayPause,
+              child: Container(
+                color: Colors.transparent,
+                child: Center(
+                  child: AnimatedOpacity(
+                    opacity: isPlaying ? 0.0 : 1.0,
+                    duration: Duration(milliseconds: 300),
+                    child: Container(
+                      width: 70,
+                      height: 70,
+                      decoration: BoxDecoration(
+                        color: Colors.black.withOpacity(0.5),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        isPlaying ? Icons.pause : Icons.play_arrow,
+                        size: 40,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+
+          // Video progress indicator
+          Positioned(
+            bottom: 0,
+            left: 0,
+            right: 0,
+            child: ValueListenableBuilder(
+              valueListenable: _videoController!,
+              builder: (context, VideoPlayerValue value, child) {
+                return LinearProgressIndicator(
+                  value: value.duration.inSeconds > 0
+                      ? value.position.inSeconds / value.duration.inSeconds
+                      : 0,
+                  backgroundColor: Colors.grey[800],
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.red),
+                  minHeight: 3,
+                );
+              },
+            ),
+          ),
+
+          // Video duration and current time
+          if (_videoController!.value.duration.inSeconds > 0)
+            Positioned(
+              bottom: 8,
+              right: 8,
+              child: Container(
+                padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.black.withOpacity(0.7),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: ValueListenableBuilder(
+                  valueListenable: _videoController!,
+                  builder: (context, VideoPlayerValue value, child) {
+                    final position = value.position;
+                    final duration = value.duration;
+                    return Text(
+                      '${_formatDuration(position)} / ${_formatDuration(duration)}',
+                      style: TextStyle(color: Colors.white, fontSize: 12),
+                    );
+                  },
+                ),
+              ),
+            ),
+        ],
+      );
+    } else {
+      return Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          CircularProgressIndicator(color: Colors.white),
+          SizedBox(height: 10),
+          Text('Loading video...', style: TextStyle(color: Colors.white)),
+          if (_videoController == null) SizedBox(height: 10),
+          ElevatedButton(
+            onPressed: () {
+              // Retry button can be added if needed
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
+            child: Text('Retry Loading Video'),
+          ),
+        ],
+      );
+    }
+  }
+
+  String _formatDuration(Duration duration) {
+    String twoDigits(int n) => n.toString().padLeft(2, '0');
+    final hours = twoDigits(duration.inHours);
+    final minutes = twoDigits(duration.inMinutes.remainder(60));
+    final seconds = twoDigits(duration.inSeconds.remainder(60));
+
+    if (duration.inHours > 0) {
+      return '$hours:$minutes:$seconds';
+    } else {
+      return '$minutes:$seconds';
+    }
   }
 
   void _showLikesDialog(String postId) async {
