@@ -1,18 +1,15 @@
+import 'package:artist_hub/dashboards/artist_dashboard/add_artist_profile.dart';
+import 'package:artist_hub/dashboards/artist_dashboard/artist_add_post.dart';
+import 'package:artist_hub/dashboards/artist_dashboard/artist_profile_screen.dart';
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import 'package:artist_hub/providers/auth_provider.dart';
-import 'package:artist_hub/shared/widgets/common_appbar/Common_Appbar.dart';
-import 'package:artist_hub/shared/Constants/app_colors.dart';
-import '../../auth/login_screen.dart';
-import '../../shared/preferences/shared_preferences.dart';
-import 'artist_home.dart';
-import 'profile_screens.dart';
-import 'add_post_screens.dart';
-import 'booking_screens.dart';
+import 'package:artist_hub/shared/constants/app_colors.dart';
+import 'artist_booking_screen.dart';
+import 'artist_home_screen.dart';
 
 class ArtistDashboard extends StatefulWidget {
-  final String? id;
-  const ArtistDashboard({this.id, super.key});
+  final String id;
+
+  const ArtistDashboard({super.key, required this.id});
 
   @override
   State<ArtistDashboard> createState() => _ArtistDashboardState();
@@ -21,272 +18,225 @@ class ArtistDashboard extends StatefulWidget {
 class _ArtistDashboardState extends State<ArtistDashboard> {
   int _selectedIndex = 0;
 
-  // Create screens with auth provider access
-  List<Widget> _buildScreens(BuildContext context) {
-    final authProvider = Provider.of<AuthProvider>(context);
+  final List<Widget> _pages = [
+    const ArtistHomePage(),
+    const ArtistAddPost(),
+    const ArtistBookingScreen(),
+    const ArtistProfileScreen(),
+    const AddArtistProfile(),
+  ];
 
-    return [
-      ArtistHome(id: authProvider.userId.isNotEmpty ? authProvider.userId : widget.id ?? ''),
-      AddPostScreens(artistId: authProvider.userId),
-      BookingScreens(userId: authProvider.userId, userType: 'artist'),
-      ProfileScreens(userId: authProvider.userId), // ✅ Profile last position
-    ];
-  }
-
-  // Create gradient icon
-  Widget _gradientIcon(IconData icon, bool isSelected, double size) {
-    if (!isSelected) {
-      return Icon(icon, size: size, color: Colors.grey);
-    }
-
-    return ShaderMask(
-      shaderCallback: (Rect bounds) {
-        return AppColors.appBarGradient.createShader(bounds);
-      },
-      child: Icon(icon, size: size, color: Colors.white),
-    );
+  void _onItemTapped(int index) {
+    setState(() {
+      _selectedIndex = index;
+    });
   }
 
   @override
   Widget build(BuildContext context) {
-    final authProvider = Provider.of<AuthProvider>(context);
-    final screens = _buildScreens(context);
+    print('ArtistDashboard opened with ID: ${widget.id}');
+
+    final gradientColors = AppColors.appBarGradient.colors;
+    final primaryColor = gradientColors[0];
+    final secondaryColor = gradientColors[1];
 
     return Scaffold(
-      appBar: CommonAppbar(
-        title: authProvider.userName.isNotEmpty
-            ? 'Welcome, ${authProvider.userName}'
-            : 'Artist Dashboard',
-        showDrawerIcon: true,
-      ),
-      drawer: _buildDrawer(context, authProvider),
-      body: screens[_selectedIndex],
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _selectedIndex,
-        onTap: (index) {
-          setState(() {
-            _selectedIndex = index;
-          });
-        },
-        backgroundColor: Colors.white,
-        elevation: 10,
-        selectedItemColor: Colors.transparent,
-        unselectedItemColor: Colors.grey,
-        selectedFontSize: 12,
-        unselectedFontSize: 12,
-        showSelectedLabels: true,
-        showUnselectedLabels: true,
-        type: BottomNavigationBarType.fixed,
-        items: [
-          BottomNavigationBarItem(
-            icon: _gradientIcon(Icons.home_outlined, _selectedIndex == 0, 24),
-            activeIcon: Container(
-              padding: EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                gradient: AppColors.appBarGradient,
-                shape: BoxShape.circle,
-              ),
-              child: Icon(Icons.home, size: 24, color: Colors.white),
-            ),
-            label: 'Home',
-          ),
-          BottomNavigationBarItem(
-            icon: _gradientIcon(
-              Icons.add_circle_outline,
-              _selectedIndex == 1,
-              24,
-            ),
-            activeIcon: Container(
-              padding: EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                gradient: AppColors.appBarGradient,
-                shape: BoxShape.circle,
-              ),
-              child: Icon(Icons.add_circle, size: 24, color: Colors.white),
-            ),
-            label: 'Add Post',
-          ),
-          BottomNavigationBarItem(
-            icon: _gradientIcon(
-              Icons.calendar_today_outlined,
-              _selectedIndex == 2,
-              24,
-            ),
-            activeIcon: Container(
-              padding: EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                gradient: AppColors.appBarGradient,
-                shape: BoxShape.circle,
-              ),
-              child: Icon(Icons.calendar_today, size: 24, color: Colors.white),
-            ),
-            label: 'Bookings',
-          ),
-          BottomNavigationBarItem(
-            icon: _gradientIcon(Icons.person_outlined, _selectedIndex == 3, 24),
-            activeIcon: Container(
-              padding: EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                gradient: AppColors.appBarGradient,
-                shape: BoxShape.circle,
-              ),
-              child: Icon(Icons.person, size: 24, color: Colors.white),
-            ),
-            label: 'Profile',
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildDrawer(BuildContext context, AuthProvider authProvider) {
-    return Drawer(
-      child: ListView(
-        padding: EdgeInsets.zero,
-        children: [
-          DrawerHeader(
-            decoration: BoxDecoration(
-              gradient: AppColors.appBarGradient,
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                CircleAvatar(
-                  radius: 30,
-                  backgroundColor: Colors.white,
-                  child: Icon(
-                    Icons.person,
-                    size: 40,
-                    color: AppColors.appBarGradient.colors[0],
-                  ),
-                ),
-                SizedBox(height: 10),
-                Text(
-                  authProvider.userName.isNotEmpty
-                      ? authProvider.userName
-                      : 'Artist',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                SizedBox(height: 5),
-                Text(
-                  authProvider.userEmail.isNotEmpty
-                      ? authProvider.userEmail
-                      : 'artist@example.com',
-                  style: TextStyle(
-                    color: Colors.white.withOpacity(0.8),
-                    fontSize: 14,
-                  ),
-                ),
+      appBar: AppBar(
+        title: const Text('Artist Dashboard'),
+        centerTitle: true,
+        flexibleSpace: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                primaryColor.withOpacity(0.9),
+                secondaryColor.withOpacity(0.7),
               ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
             ),
           ),
-          ListTile(
-            leading: Icon(Icons.home, color: Colors.grey[700]),
-            title: Text('Home'),
-            onTap: () {
-              setState(() {
-                _selectedIndex = 0;
-              });
-              Navigator.pop(context);
-            },
-          ),
-          ListTile(
-            leading: Icon(Icons.add_photo_alternate, color: Colors.grey[700]),
-            title: Text('Add Post'),
-            onTap: () {
-              setState(() {
-                _selectedIndex = 1;
-              });
-              Navigator.pop(context);
-            },
-          ),
-          ListTile(
-            leading: Icon(Icons.calendar_month, color: Colors.grey[700]),
-            title: Text('My Bookings'),
-            onTap: () {
-              setState(() {
-                _selectedIndex = 2;
-              });
-              Navigator.pop(context);
-            },
-          ),
-          ListTile(
-            leading: Icon(Icons.person, color: Colors.grey[700]),
-            title: Text('Profile'),
-            onTap: () {
-              setState(() {
-                _selectedIndex = 3;
-              });
-              Navigator.pop(context);
-            },
-          ),
-          Divider(),
-          ListTile(
-            leading: Icon(Icons.settings, color: Colors.grey[700]),
-            title: Text('Settings'),
-            onTap: () {
-              Navigator.pop(context);
-            },
-          ),
-          ListTile(
-            leading: Icon(Icons.help, color: Colors.grey[700]),
-            title: Text('Help & Support'),
-            onTap: () {
-              Navigator.pop(context);
-            },
-          ),
-          Divider(),
-          ListTile(
-            leading: Icon(Icons.logout, color: Colors.red),
-            title: Text('Logout', style: TextStyle(color: Colors.red)),
-            onTap: () {
-              Navigator.pop(context);
-              _showLogoutDialog(context);
-            },
-          ),
-        ],
+        ),
+        elevation: 0,
+      ),
+      body: _pages[_selectedIndex],
+      bottomNavigationBar: _buildBottomNavigationBar(
+        primaryColor,
+        secondaryColor,
       ),
     );
   }
 
-  void _showLogoutDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Logout'),
-        content: Text('Are you sure you want to logout?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () async {
-              Navigator.pop(context);
-
-              // Clear SharedPreferences
-              await SharedPreferencesHelper.clearAll();
-
-              // Clear Provider
-              final authProvider = Provider.of<AuthProvider>(context, listen: false);
-              authProvider.logout();
-
-              // Navigate to Login
-              Navigator.pushAndRemoveUntil(
-                context,
-                MaterialPageRoute(builder: (context) => const LoginScreen()),
-                    (route) => false,
-              );
-            },
-            child: Text('Logout', style: TextStyle(color: Colors.red)),
-          ),
-        ],
+  BottomNavigationBar _buildBottomNavigationBar(
+      Color primaryColor,
+      Color secondaryColor,
+      ) {
+    return BottomNavigationBar(
+      type: BottomNavigationBarType.fixed,
+      currentIndex: _selectedIndex,
+      selectedItemColor: primaryColor,
+      unselectedItemColor: Colors.grey[600],
+      selectedLabelStyle: TextStyle(
+        fontSize: 12,
+        fontWeight: FontWeight.w600,
+        color: primaryColor,
       ),
+      unselectedLabelStyle: TextStyle(
+        fontSize: 11,
+        fontWeight: FontWeight.w500,
+        color: Colors.grey[600],
+      ),
+      showSelectedLabels: true,
+      showUnselectedLabels: true,
+      elevation: 12,
+      backgroundColor: Colors.white,
+      selectedFontSize: 12,
+      unselectedFontSize: 11,
+      iconSize: 24,
+      items: [
+        // Home
+        BottomNavigationBarItem(
+          icon: Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: _selectedIndex == 0
+                  ? LinearGradient(
+                colors: [primaryColor, secondaryColor],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              )
+                  : null,
+              color: _selectedIndex == 0 ? null : Colors.transparent,
+            ),
+            child: Icon(
+              _selectedIndex == 0 ? Icons.home : Icons.home_outlined,
+              color: _selectedIndex == 0 ? Colors.white : Colors.grey[600],
+              size: _selectedIndex == 0 ? 22 : 20,
+            ),
+          ),
+          label: 'Home',
+        ),
+
+        // Add Post
+        BottomNavigationBarItem(
+          icon: Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: _selectedIndex == 1
+                  ? LinearGradient(
+                colors: [primaryColor, secondaryColor],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              )
+                  : LinearGradient(
+                colors: [
+                  primaryColor.withOpacity(0.1),
+                  secondaryColor.withOpacity(0.1),
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              border: Border.all(
+                color: _selectedIndex == 1
+                    ? Colors.transparent
+                    : primaryColor.withOpacity(0.3),
+                width: 1.5,
+              ),
+              boxShadow: _selectedIndex == 1
+                  ? [
+                BoxShadow(
+                  color: primaryColor.withOpacity(0.4),
+                  blurRadius: 8,
+                  spreadRadius: 2,
+                ),
+              ]
+                  : null,
+            ),
+            child: Icon(
+              _selectedIndex == 1 ? Icons.add : Icons.add_circle_outline,
+              color: _selectedIndex == 1 ? Colors.white : primaryColor,
+              size: _selectedIndex == 1 ? 24 : 22,
+            ),
+          ),
+          label: 'Add Post',
+        ),
+
+        // Bookings
+        BottomNavigationBarItem(
+          icon: Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: _selectedIndex == 2
+                  ? LinearGradient(
+                colors: [primaryColor, secondaryColor],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              )
+                  : null,
+              color: _selectedIndex == 2 ? null : Colors.transparent,
+            ),
+            child: Icon(
+              _selectedIndex == 2
+                  ? Icons.calendar_today
+                  : Icons.calendar_today_outlined,
+              color: _selectedIndex == 2 ? Colors.white : Colors.grey[600],
+              size: _selectedIndex == 2 ? 22 : 20,
+            ),
+          ),
+          label: 'Bookings',
+        ),
+
+        // Profile
+        BottomNavigationBarItem(
+          icon: Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: _selectedIndex == 3
+                  ? LinearGradient(
+                colors: [primaryColor, secondaryColor],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              )
+                  : null,
+              color: _selectedIndex == 3 ? null : Colors.transparent,
+            ),
+            child: Icon(
+              _selectedIndex == 3 ? Icons.person : Icons.person_outline,
+              color: _selectedIndex == 3 ? Colors.white : Colors.grey[600],
+              size: _selectedIndex == 3 ? 22 : 20,
+            ),
+          ),
+          label: 'Profile',
+        ),
+
+        // Add Artist Profile
+        BottomNavigationBarItem(
+          icon: Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: _selectedIndex == 4
+                  ? LinearGradient(
+                colors: [primaryColor, secondaryColor],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              )
+                  : null,
+              color: _selectedIndex == 4 ? null : Colors.transparent,
+            ),
+            child: Icon(
+              _selectedIndex == 4 ? Icons.add_box : Icons.add_box_outlined,
+              color: _selectedIndex == 4 ? Colors.white : Colors.grey[600],
+              size: _selectedIndex == 4 ? 22 : 20,
+            ),
+          ),
+          label: 'Add Profile',
+        ),
+      ],
+      onTap: _onItemTapped,
     );
   }
 }

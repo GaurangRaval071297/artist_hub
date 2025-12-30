@@ -1,9 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import 'package:artist_hub/providers/auth_provider.dart';
-import 'package:artist_hub/providers/theme_provider.dart';
-import 'package:artist_hub/providers/post_provider.dart';
-import 'package:artist_hub/providers/booking_provider.dart';
 import 'package:artist_hub/shared/preferences/shared_preferences.dart';
 import 'package:artist_hub/splash_screen/splash_screen.dart';
 
@@ -21,17 +16,7 @@ void main() async {
   print('isFirstTime: ${SharedPreferencesHelper.isFirstTime}');
   print('====================================');
 
-  runApp(
-    MultiProvider(
-      providers: [
-        ChangeNotifierProvider(create: (_) => AuthProvider()),
-        ChangeNotifierProvider(create: (_) => ThemeProvider()),
-        ChangeNotifierProvider(create: (_) => PostProvider()),
-        ChangeNotifierProvider(create: (_) => BookingProvider()),
-      ],
-      child: MyApp(),
-    ),
-  );
+  runApp(const MyApp()); // ✅ MultiProvider નથી
 }
 
 class MyApp extends StatelessWidget {

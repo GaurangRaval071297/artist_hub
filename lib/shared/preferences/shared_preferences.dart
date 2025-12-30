@@ -89,6 +89,28 @@ class SharedPreferencesHelper {
     await _prefs?.setString(_userAddressKey, address);
   }
 
+
+  // Add these async methods to your SharedPreferencesHelper class
+  static Future<String> getUserPhone() async {
+    return _prefs?.getString(_userPhoneKey) ?? '';
+  }
+
+  static Future<String> getUserAddress() async {
+    return _prefs?.getString(_userAddressKey) ?? '';
+  }
+
+  static Future<String> getUserName() async {
+    return _prefs?.getString(_userNameKey) ?? '';
+  }
+
+  static Future<String> getUserEmail() async {
+    return _prefs?.getString(_userEmailKey) ?? '';
+  }
+
+  static Future<String> getUserType() async {
+    return _prefs?.getString(_userTypeKey) ?? '';
+  }
+
   static Future<void> clearAll() async {
     await _prefs?.remove(_isLoggedInKey);
     await _prefs?.remove(_userEmailKey);

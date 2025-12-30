@@ -1,10 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import 'package:http/http.dart' as http;
-import 'package:artist_hub/providers/auth_provider.dart';
 import 'package:artist_hub/auth/login_screen.dart';
-import 'package:artist_hub/shared/constants/api_urls.dart';
 import 'package:artist_hub/shared/constants/app_colors.dart';
 import 'package:artist_hub/shared/constants/custom_dialog.dart';
 import 'package:artist_hub/models/register_model.dart';
@@ -85,7 +82,7 @@ class _RegisterState extends State<Register> {
     });
 
     try {
-      final url = Uri.parse(ApiUrls.registerUrl);
+      final url = Uri.parse('https://prakrutitech.xyz/gaurang/register.php');
       final request = http.MultipartRequest('POST', url);
 
       // Add text fields
@@ -108,21 +105,9 @@ class _RegisterState extends State<Register> {
         final registerModel = RegisterModel.fromJson(responseData);
 
         if (registerModel.status == true) {
-          // Save to AuthProvider
-          final authProvider = Provider.of<AuthProvider>(context, listen: false);
-          authProvider.login(
-            userId: registerModel.user?.userId?.toString() ?? '',
-            userType: selectedRoleApi,
-            userEmail: emailController.text,
-            userName: nameController.text,
-            userPhone: phoneController.text,
-            userAddress: addressController.text,
-          );
-
           // Save to SharedPreferences
           await SharedPreferencesHelper.setUserEmail(emailController.text);
           await SharedPreferencesHelper.setUserType(selectedRoleApi);
-          await SharedPreferencesHelper.setUserLoggedIn(true);
           await SharedPreferencesHelper.setUserName(nameController.text);
           await SharedPreferencesHelper.setUserPhone(phoneController.text);
           await SharedPreferencesHelper.setUserAddress(addressController.text);
@@ -130,6 +115,9 @@ class _RegisterState extends State<Register> {
           if (registerModel.user?.userId != null) {
             await SharedPreferencesHelper.setUserId(registerModel.user!.userId.toString());
           }
+
+          // Auto login after registration
+          await SharedPreferencesHelper.setUserLoggedIn(true);
 
           showAlert(
             "Success",

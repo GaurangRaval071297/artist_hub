@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import 'package:artist_hub/providers/auth_provider.dart';
 import 'package:artist_hub/auth/login_screen.dart';
 import 'package:artist_hub/shared/constants/app_colors.dart';
 import 'package:artist_hub/shared/preferences/shared_preferences.dart';
@@ -80,22 +78,14 @@ class _SplashScreenState extends State<SplashScreen>
     final isLoggedIn = SharedPreferencesHelper.isUserLoggedIn;
     final userType = SharedPreferencesHelper.userType;
     final userId = SharedPreferencesHelper.userId;
-    final userEmail = SharedPreferencesHelper.userEmail;
-    final userName = SharedPreferencesHelper.userName;
 
-    // Initialize AuthProvider with saved data
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final authProvider = Provider.of<AuthProvider>(context, listen: false);
-
-      if (isLoggedIn) {
-        authProvider.login(
-          userId: userId,
-          userType: userType,
-          userEmail: userEmail,
-          userName: userName,
-        );
-      }
-    });
+    // Debug prints
+    print('=== SPLASH SCREEN CHECK ===');
+    print('isFirstTime: $isFirstTime');
+    print('isLoggedIn: $isLoggedIn');
+    print('userType: $userType');
+    print('userId: $userId');
+    print('===========================');
 
     // Navigate based on conditions
     Widget nextScreen;
@@ -107,14 +97,18 @@ class _SplashScreenState extends State<SplashScreen>
     } else {
       if (userType == 'artist') {
         if (userId.isNotEmpty) {
-          print("UserId from SharedPref: $userId");
+          print("Navigating to ArtistDashboard with userId: $userId");
           nextScreen = ArtistDashboard(id: userId);
         } else {
           print('Warning: Artist logged in but no user ID found');
           nextScreen = const LoginScreen();
         }
-      } else {
+      } else if (userType == 'customer') {
+        print("Navigating to CustomerDashboard");
         nextScreen = const CustomerDashboard();
+      } else {
+        print('Unknown user type: $userType, redirecting to login');
+        nextScreen = const LoginScreen();
       }
     }
 

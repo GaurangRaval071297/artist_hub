@@ -7,8 +7,7 @@ import '../dashboards/artist_dashboard/artist_dashboard.dart';
 import '../dashboards/customer_dashboard/customer_dashboard.dart';
 
 class IntroScreen extends StatefulWidget {
-  final String? id;
-  const IntroScreen({this.id,super.key});
+  const IntroScreen({super.key});
 
   @override
   State<IntroScreen> createState() => _IntroScreenState();
@@ -86,15 +85,19 @@ class _IntroScreenState extends State<IntroScreen> {
   }
 
   void _navigateToNextScreen() async {
+    // Set that user has seen intro
+    await SharedPreferencesHelper.setFirstTime(false);
+
     final isLoggedIn = SharedPreferencesHelper.isUserLoggedIn;
     final userType = SharedPreferencesHelper.userType;
+    final userId = SharedPreferencesHelper.userId;
 
     if (isLoggedIn) {
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
           builder: (context) => userType == 'artist'
-              ? ArtistDashboard(id: widget.id,)
+              ? ArtistDashboard(id: userId) // ✅ userId pass કરો
               : const CustomerDashboard(),
         ),
       );

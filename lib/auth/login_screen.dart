@@ -1,11 +1,9 @@
 import 'dart:convert';
+import 'package:artist_hub/shared/constants/api_urls.dart';
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import 'package:http/http.dart' as http;
-import 'package:artist_hub/providers/auth_provider.dart';
 import 'package:artist_hub/dashboards/artist_dashboard/artist_dashboard.dart';
 import 'package:artist_hub/models/login_model.dart';
-import 'package:artist_hub/shared/constants/api_urls.dart';
 import 'package:artist_hub/shared/constants/app_colors.dart';
 import 'package:artist_hub/shared/constants/app_messages.dart';
 import 'package:artist_hub/shared/constants/custom_dialog.dart';
@@ -101,46 +99,36 @@ class _LoginScreenState extends State<LoginScreen> {
         final loginModel = LoginModel.fromJson(responseData);
 
         if (loginModel.status == true) {
+          // Save user data to SharedPreferences
           await SharedPreferencesHelper.init();
           await SharedPreferencesHelper.setUserLoggedIn(true);
           await SharedPreferencesHelper.setUserEmail(_emailController.text);
           await SharedPreferencesHelper.setUserType(_selectedRole!);
-          await SharedPreferencesHelper.setUserPhone(
-            loginModel.user?.phone ?? '',
-          );
-          await SharedPreferencesHelper.setUserAddress(
-            loginModel.user?.address ?? '',
-          );
 
-          if (loginModel.user != null && loginModel.user!.id != null) {
+          if (loginModel.user != null) {
             await SharedPreferencesHelper.setUserId(
-              loginModel.user!.id.toString(),
+              loginModel.user!.id?.toString() ?? '',
             );
             await SharedPreferencesHelper.setUserName(
               loginModel.user!.name ?? '',
             );
+            await SharedPreferencesHelper.setUserPhone(
+              loginModel.user!.phone ?? '',
+            );
+            await SharedPreferencesHelper.setUserAddress(
+              loginModel.user!.address ?? '',
+            );
             await SharedPreferencesHelper.setUserProfilePic('');
           }
 
-          final authProvider = Provider.of<AuthProvider>(
-            context,
-            listen: false,
-          );
-          authProvider.login(
-            userId: loginModel.user?.id?.toString() ?? '',
-            userType: _selectedRole!,
-            userEmail: _emailController.text,
-            userName: loginModel.user?.name ?? '',
-            userPhone: loginModel.user?.phone ?? '',
-            userAddress: loginModel.user?.address ?? '',
-          );
-
+          // Navigate based on role
           if (_selectedRole == 'artist') {
             Navigator.pushReplacement(
               context,
               MaterialPageRoute(
-                builder: (context) =>
-                    ArtistDashboard(id: loginModel.user!.id.toString()),
+                builder: (context) => ArtistDashboard(
+                  id: loginModel.user?.id?.toString() ?? '',
+                ),
               ),
             );
           } else if (_selectedRole == 'customer') {
@@ -150,7 +138,7 @@ class _LoginScreenState extends State<LoginScreen> {
             );
           }
 
-          // 4. Show success message
+          // Show success message
           WidgetsBinding.instance.addPostFrameCallback((_) {
             showAlert(
               'Success',
@@ -168,6 +156,7 @@ class _LoginScreenState extends State<LoginScreen> {
       print('Login Error: $e');
       showAlert('Error', 'Network error: $e');
     }
+
     setState(() {
       _isLoading = false;
     });
@@ -417,24 +406,24 @@ class _LoginScreenState extends State<LoginScreen> {
                               ),
                               child: _isLoading
                                   ? SizedBox(
-                                      height: isSmallScreen ? 20 : 24,
-                                      width: isSmallScreen ? 20 : 24,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2.5,
-                                        valueColor:
-                                            const AlwaysStoppedAnimation<Color>(
-                                              Colors.white,
-                                            ),
-                                      ),
-                                    )
+                                height: isSmallScreen ? 20 : 24,
+                                width: isSmallScreen ? 20 : 24,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2.5,
+                                  valueColor:
+                                  const AlwaysStoppedAnimation<Color>(
+                                    Colors.white,
+                                  ),
+                                ),
+                              )
                                   : Text(
-                                      'Sign In',
-                                      style: TextStyle(
-                                        color: Colors.white,
-                                        fontSize: isSmallScreen ? 16 : 18,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
+                                'Sign In',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: isSmallScreen ? 16 : 18,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
                             ),
                           ),
                           SizedBox(height: isSmallScreen ? 20 : 25),
