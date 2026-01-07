@@ -1,44 +1,70 @@
+class ArtistModel {
+  int id;
+  String name;
+  String email;
+  String phone;
+  String address;
+  String? category;
+  String? experience;
+  String? price;
+  String? description;
+  int totalReviews;
+  double avgRating;
+  int totalPosts;
+  List<dynamic> recentReviews;
+  Map<String, dynamic>? profile;
 
-class Artist {
-final String id;
-final String name;
-final String email;
-final String phone;
-final String address;
-final String profilePic;
-final String category;
-final String experience;
-final double rating;
-final String hourlyRate;
-final String description;
+  ArtistModel({
+    required this.id,
+    required this.name,
+    required this.email,
+    required this.phone,
+    required this.address,
+    this.category,
+    this.experience,
+    this.price,
+    this.description,
+    this.totalReviews = 0,
+    this.avgRating = 0.0,
+    this.totalPosts = 0,
+    this.recentReviews = const [],
+    this.profile,
+  });
 
-Artist({
-required this.id,
-required this.name,
-required this.email,
-required this.phone,
-required this.address,
-required this.profilePic,
-required this.category,
-required this.experience,
-required this.rating,
-required this.hourlyRate,
-required this.description,
-});
+  factory ArtistModel.fromJson(Map<String, dynamic> json) {
+    return ArtistModel(
+      id: int.parse(json['id'].toString()),
+      name: json['name'] ?? '',
+      email: json['email'] ?? '',
+      phone: json['phone'] ?? '',
+      address: json['address'] ?? '',
+      category: json['category'] ?? json['profile']?['category'],
+      experience: json['experience'] ?? json['profile']?['experience'],
+      price: json['price'] ?? json['profile']?['price'],
+      description: json['description'] ?? json['profile']?['description'],
+      totalReviews: json['total_reviews'] ?? 0,
+      avgRating: double.parse((json['avg_rating'] ?? 0.0).toString()),
+      totalPosts: json['total_posts'] ?? 0,
+      recentReviews: json['recent_reviews'] ?? [],
+      profile: json['profile'] ?? {},
+    );
+  }
 
-factory Artist.fromJson(Map<String, dynamic> json) {
-return Artist(
-id: json['id']?.toString() ?? '',
-name: json['name'] ?? 'Artist',
-email: json['email'] ?? '',
-phone: json['phone'] ?? '',
-address: json['address'] ?? '',
-profilePic: json['profile_pic'] ?? '',
-category: json['category'] ?? 'General',
-experience: (json['experience'] ?? 0).toString(),
-rating: double.parse((json['rating'] ?? 4.5).toString()),
-hourlyRate: (json['hourly_rate'] ?? 500).toString(),
-description: json['description'] ?? 'Professional Artist',
-);
-}
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'name': name,
+      'email': email,
+      'phone': phone,
+      'address': address,
+      'category': category,
+      'experience': experience,
+      'price': price,
+      'description': description,
+      'total_reviews': totalReviews,
+      'avg_rating': avgRating,
+      'total_posts': totalPosts,
+      'recent_reviews': recentReviews,
+    };
+  }
 }
