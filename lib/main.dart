@@ -9,7 +9,6 @@ main() async {
   final userData = SharedPref.getUserData();
   if (userData != null && userData['role'] == 'artist') {
     if (userData['is_approved'] != true) {
-      // Clear data if not approved
       await SharedPref.clearUserData();
     }
   }

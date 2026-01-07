@@ -80,7 +80,7 @@ class _LoginScreenState extends State<LoginScreen> {
           print('Artist approval check: $isApproved -> $approved');
 
           if (approved) {
-            Navigator.pushReplacementNamed(context, AppRoutes.artistDashboard);
+            Navigator.pushNamedAndRemoveUntil(context, AppRoutes.artistDashboard,(route) => false);
           } else {
             Helpers.showSnackbar(
               context,
@@ -90,7 +90,7 @@ class _LoginScreenState extends State<LoginScreen> {
             // Don't clear data here, let splash screen handle it
           }
         } else {
-          Navigator.pushReplacementNamed(context, AppRoutes.customerDashboard);
+          Navigator.pushNamedAndRemoveUntil(context, AppRoutes.customerDashboard,(route) => false);
         }
       } else {
         Helpers.showSnackbar(context, result['message'] ?? 'Login failed', isError: true);
