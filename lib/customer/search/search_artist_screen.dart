@@ -8,6 +8,8 @@ import 'package:artist_hub/core/widgets/no_data_widget.dart';
 import 'package:artist_hub/models/artist_model.dart';
 import 'package:artist_hub/utils/helpers.dart';
 
+import '../bookings/booking_screen.dart';
+
 class SearchArtistScreen extends StatefulWidget {
   const SearchArtistScreen({super.key});
 
@@ -112,159 +114,6 @@ class _SearchArtistScreenState extends State<SearchArtistScreen> {
     setState(() => _filteredArtists = filtered);
   }
 
-  void _showFilterDialog() {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: AppColors.card,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.only(
-          topLeft: Radius.circular(20),
-          topRight: Radius.circular(20),
-        ),
-      ),
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setState) {
-            return Padding(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Text(
-                    'Filter & Sort',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.textColor,
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-
-                  // Category filter
-                  const Align(
-                    alignment: Alignment.centerLeft,
-                    child: Text(
-                      'Category',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w500,
-                        color: AppColors.textColor,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: _categories.map((category) {
-                      final isSelected = _selectedCategory == category;
-                      return FilterChip(
-                        selected: isSelected,
-                        onSelected: (selected) {
-                          setState(() => _selectedCategory = category);
-                        },
-                        label: Text(
-                          category == 'all' ? 'All Categories' : category,
-                          style: TextStyle(
-                            color: isSelected ? AppColors.white : AppColors.textColor,
-                          ),
-                        ),
-                        selectedColor: AppColors.primaryColor,
-                        checkmarkColor: AppColors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(20),
-                          side: BorderSide(
-                            color: isSelected
-                                ? AppColors.primaryColor
-                                : AppColors.lightGrey,
-                          ),
-                        ),
-                      );
-                    }).toList(),
-                  ),
-
-                  const SizedBox(height: 20),
-
-                  // Sort options
-                  const Align(
-                    alignment: Alignment.centerLeft,
-                    child: Text(
-                      'Sort By',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w500,
-                        color: AppColors.textColor,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Column(
-                    children: _sortOptions.entries.map((entry) {
-                      final isSelected = _selectedSort == entry.key;
-                      return RadioListTile<String>(
-                        value: entry.key,
-                        groupValue: _selectedSort,
-                        onChanged: (value) {
-                          setState(() => _selectedSort = value!);
-                        },
-                        title: Text(entry.value),
-                        activeColor: AppColors.primaryColor,
-                        contentPadding: EdgeInsets.zero,
-                      );
-                    }).toList(),
-                  ),
-
-                  const SizedBox(height: 24),
-
-                  // Apply button
-                  Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton(
-                          onPressed: () {
-                            Navigator.pop(context);
-                          },
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: AppColors.darkGrey,
-                            side: const BorderSide(color: AppColors.lightGrey),
-                            minimumSize: const Size(0, 50),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                          ),
-                          child: const Text('Cancel'),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: ElevatedButton(
-                          onPressed: () {
-                            _applyFilters();
-                            Navigator.pop(context);
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.primaryColor,
-                            foregroundColor: AppColors.white,
-                            minimumSize: const Size(0, 50),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                          ),
-                          child: const Text('Apply'),
-                        ),
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 16),
-                ],
-              ),
-            );
-          },
-        );
-      },
-    );
-  }
 
   void _openArtistDetail(ArtistModel artist) {
     Navigator.pushNamed(
@@ -279,13 +128,10 @@ class _SearchArtistScreenState extends State<SearchArtistScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
+        iconTheme: IconThemeData(color: Colors.white),
         backgroundColor: AppColors.primaryColor,
         title: const Text('Find Artists', style: TextStyle(color: AppColors.white),),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.filter_list),
-            onPressed: _showFilterDialog,
-          ),
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: _loadArtists,
@@ -400,6 +246,10 @@ class _SearchArtistScreenState extends State<SearchArtistScreen> {
   }
 
   Widget _buildArtistCard(ArtistModel artist) {
+    // Get the valid price for booking
+    final bookingPrice = _getBookingPrice(artist.price);
+    // /final formattedPrice = _formatPrice(artist.price);
+
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
@@ -422,7 +272,7 @@ class _SearchArtistScreenState extends State<SearchArtistScreen> {
             padding: const EdgeInsets.all(16),
             child: Row(
               children: [
-                // Artist avatar
+                // Artist avatar (same as before)
                 Container(
                   width: 70,
                   height: 70,
@@ -463,15 +313,21 @@ class _SearchArtistScreenState extends State<SearchArtistScreen> {
                         overflow: TextOverflow.ellipsis,
                       ),
                       const SizedBox(height: 4),
-                      if (artist.category != null)
-                        Text(
-                          artist.category!,
-                          style: const TextStyle(
-                            fontSize: 14,
-                            color: AppColors.darkGrey,
+                      if (artist.category != null && artist.category!.isNotEmpty)
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: AppColors.primaryColor.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(4),
                           ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
+                          child: Text(
+                            artist.category!,
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: AppColors.primaryColor,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
                         ),
                       const SizedBox(height: 8),
                       Row(
@@ -499,15 +355,15 @@ class _SearchArtistScreenState extends State<SearchArtistScreen> {
                             ),
                           ),
                           const Spacer(),
-                          if (artist.price != null)
-                            Text(
-                              '₹${artist.price}',
-                              style: const TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w700,
-                                color: AppColors.primaryColor,
-                              ),
-                            ),
+                          // Display formatted price
+                          // Text(
+                          //   formattedPrice,
+                          //   style: TextStyle(
+                          //     fontSize: 16,
+                          //     fontWeight: FontWeight.w700,
+                          //     color: AppColors.primaryColor,
+                          //   ),
+                          // ),
                         ],
                       ),
                     ],
@@ -516,31 +372,37 @@ class _SearchArtistScreenState extends State<SearchArtistScreen> {
 
                 const SizedBox(width: 8),
 
-                // Book button
-                ElevatedButton(
-                  onPressed: () {
-                    Navigator.pushNamed(
-                      context,
-                      AppRoutes.createBooking,
-                      arguments: {
-                        'artistId': artist.id,
-                        'artistName': artist.name,
-                      },
-                    );
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primaryColor,
-                    foregroundColor: AppColors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 8,
-                    ),
-                  ),
-                  child: const Text('Book'),
-                ),
+                // Book button - Pass the validated price
+                // ElevatedButton(
+                //   onPressed: bookingPrice > 0
+                //       ? () {
+                //     Navigator.push(
+                //       context,
+                //       MaterialPageRoute(
+                //         builder: (context) => BookingScreen(
+                //           artist: artist,
+                //           basePrice: bookingPrice, // Pass validated price
+                //         ),
+                //       ),
+                //     );
+                //   }
+                //       : () {
+                //     // Show dialog for contact price
+                //     _showContactDialog(artist);
+                //   },
+                //   style: ElevatedButton.styleFrom(
+                //     backgroundColor: AppColors.primaryColor,
+                //     foregroundColor: AppColors.white,
+                //     shape: RoundedRectangleBorder(
+                //       borderRadius: BorderRadius.circular(8),
+                //     ),
+                //     padding: const EdgeInsets.symmetric(
+                //       horizontal: 16,
+                //       vertical: 8,
+                //     ),
+                //   ),
+                //   child: Text(bookingPrice > 0 ? 'Book' : 'Contact'),
+                // ),
               ],
             ),
           ),
@@ -548,4 +410,63 @@ class _SearchArtistScreenState extends State<SearchArtistScreen> {
       ),
     );
   }
+
+// Add this helper method to get validated booking price
+  double _getBookingPrice(String? price) {
+    if (price == null || price.isEmpty || price.toLowerCase() == 'null') {
+      return 0.0;
+    }
+
+    // Try to parse as number
+    final numPrice = double.tryParse(price);
+    if (numPrice == null || numPrice <= 0) {
+      return 0.0;
+    }
+
+    return numPrice;
+  }
+
+// Add this method to show contact dialog
+  void _showContactDialog(ArtistModel artist) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Contact Artist'),
+        content: Text(
+          '${artist.name} does not have a fixed price listed. '
+              'Please contact them directly to discuss pricing and booking details.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
+  }
+// Add this helper method to format the price
+//   String _formatPrice(String? price) {
+//     if (price == null || price.isEmpty || price.toLowerCase() == 'null') {
+//       return 'Contact for price';
+//     }
+//
+//     // Check if price is a valid number
+//     final cleanedPrice = price.replaceAll(RegExp(r'[^0-9.]'), '');
+//     if (cleanedPrice.isEmpty || cleanedPrice == '0') {
+//       return 'Contact for price';
+//     }
+//
+//     // Try to parse as number
+//     try {
+//       final numPrice = double.tryParse(cleanedPrice);
+//       if (numPrice == null || numPrice == 0) {
+//         return 'Contact for price';
+//       }
+//       return '₹${numPrice.toStringAsFixed(0)}';
+//     } catch (e) {
+//       return '₹$price';
+//     }
+//   }
+
 }

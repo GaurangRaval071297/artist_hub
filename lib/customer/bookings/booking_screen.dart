@@ -1,49 +1,136 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:artist_hub/core/constants/app_colors.dart';
 import 'package:artist_hub/core/services/api_service.dart';
 import 'package:artist_hub/core/services/shared_pref.dart';
 import 'package:artist_hub/core/widgets/custom_button.dart';
 import 'package:artist_hub/core/widgets/custom_textfield.dart';
+import 'package:artist_hub/models/artist_model.dart';
 import 'package:artist_hub/utils/helpers.dart';
 
-class BookingScreen extends StatefulWidget {
-  final int artistId;
-  final String artistName;
+import '../../core/routes/app_routes.dart';
 
-  const BookingScreen({
-    super.key,
-    required this.artistId,
-    required this.artistName,
+class BookingScreen extends StatefulWidget {
+  final ArtistModel artist;
+  final double basePrice;
+
+  const BookingScreen({super.key, required this.artist,    this.basePrice = 0.0, // Default to 0
   });
 
   @override
+
   State<BookingScreen> createState() => _BookingScreenState();
 }
 
 class _BookingScreenState extends State<BookingScreen> {
+  @override
+  void initState() {
+    super.initState();
+    _debugArtistData();
+  }
+
+  void _debugArtistData() {
+    print('=== DEBUG: Artist Data in BookingScreen ===');
+    print('Artist ID: ${widget.artist.id}');
+    print('Artist Name: ${widget.artist.name}');
+    print('Artist Price: ${widget.artist.price}');
+    print('Artist Price Type: ${widget.artist.price.runtimeType}');
+    print('Artist Category: ${widget.artist.category}');
+    print('Artist Rating: ${widget.artist.avgRating}');
+    print('Full Artist Object: ${widget.artist.toJson()}');
+  }
   final _formKey = GlobalKey<FormState>();
   final _eventAddressController = TextEditingController();
-  final _specialRequestController = TextEditingController();
   final _paymentIdController = TextEditingController();
 
-  DateTime _selectedDate = DateTime.now();
-  TimeOfDay _selectedTime = TimeOfDay.now();
-  String _selectedPaymentType = 'cash';
+  DateTime? _selectedDate;
+  String _selectedPaymentMethod = 'cash';
   bool _isLoading = false;
-  bool _isSubmitting = false;
+  String? _errorMessage;
 
+  // Calculate total amount
+// Update the getter for total amount
+  int get _totalAmount {
+    // Debug the price value
+    print('Artist price string: ${widget.artist.price}');
+    print('Price runtime type: ${widget.artist.price.runtimeType}');
+
+    // Handle null or empty price
+    if (widget.artist.price == null ||
+        widget.artist.price!.isEmpty ||
+        widget.artist.price!.toLowerCase() == 'null') {
+      print('Price is null/empty, returning 0');
+      return 0;
+    }
+
+    // Clean the price string - remove any non-numeric characters except decimal point
+    String cleanPrice = widget.artist.price!.replaceAll(RegExp(r'[^0-9.]'), '');
+    print('Cleaned price string: $cleanPrice');
+
+    if (cleanPrice.isEmpty) {
+      print('Cleaned price is empty, returning 0');
+      return 0;
+    }
+
+    // Try parsing as double first, then convert to int
+    try {
+      double parsedPrice = double.parse(cleanPrice);
+      print('Parsed double price: $parsedPrice');
+
+      // Round to nearest integer
+      int intPrice = parsedPrice.round();
+      print('Rounded integer price: $intPrice');
+
+      return intPrice;
+    } catch (e) {
+      print('Error parsing price: $e');
+      // Try as int directly
+      try {
+        int intPrice = int.parse(cleanPrice);
+        print('Directly parsed integer price: $intPrice');
+        return intPrice;
+      } catch (e2) {
+        print('Failed to parse as integer: $e2');
+        return 0;
+      }
+    }
+  }
+
+// Alternative: Create a helper method to format price for display
+  String _formatDisplayPrice() {
+    if (widget.artist.price == null ||
+        widget.artist.price!.isEmpty ||
+        widget.artist.price!.toLowerCase() == 'null') {
+      return 'Contact for price';
+    }
+
+    try {
+      // Clean the price string
+      String cleanPrice = widget.artist.price!.replaceAll(RegExp(r'[^0-9.]'), '');
+      if (cleanPrice.isEmpty) return 'Contact for price';
+
+      double parsedPrice = double.parse(cleanPrice);
+      if (parsedPrice == 0) return 'Contact for price';
+
+      // Format with Indian Rupee symbol and thousands separator
+      return '₹${parsedPrice.toStringAsFixed(0)}';
+    } catch (e) {
+      // If parsing fails, try to display the original string
+      return '₹${widget.artist.price!}';
+    }
+  }
   Future<void> _selectDate(BuildContext context) async {
     final DateTime? picked = await showDatePicker(
       context: context,
-      initialDate: _selectedDate,
+      initialDate: DateTime.now().add(const Duration(days: 1)),
       firstDate: DateTime.now(),
       lastDate: DateTime.now().add(const Duration(days: 365)),
       builder: (context, child) {
         return Theme(
           data: ThemeData.light().copyWith(
-            primaryColor: AppColors.primaryColor,
-            colorScheme: const ColorScheme.light(primary: AppColors.primaryColor),
-            buttonTheme: const ButtonThemeData(textTheme: ButtonTextTheme.primary),
+            colorScheme: ColorScheme.light(
+              primary: AppColors.primaryColor,
+            ),
           ),
           child: child!,
         );
@@ -51,166 +138,220 @@ class _BookingScreenState extends State<BookingScreen> {
     );
 
     if (picked != null && picked != _selectedDate) {
-      setState(() => _selectedDate = picked);
-    }
-  }
-
-  Future<void> _selectTime(BuildContext context) async {
-    final TimeOfDay? picked = await showTimePicker(
-      context: context,
-      initialTime: _selectedTime,
-      builder: (context, child) {
-        return Theme(
-          data: ThemeData.light().copyWith(
-            primaryColor: AppColors.primaryColor,
-            colorScheme: const ColorScheme.light(primary: AppColors.primaryColor),
-            buttonTheme: const ButtonThemeData(textTheme: ButtonTextTheme.primary),
-          ),
-          child: child!,
-        );
-      },
-    );
-
-    if (picked != null && picked != _selectedTime) {
-      setState(() => _selectedTime = picked);
+      setState(() {
+        _selectedDate = picked;
+      });
     }
   }
 
   Future<void> _submitBooking() async {
-    if (!_formKey.currentState!.validate()) return;
+    if (!_formKey.currentState!.validate()) {
+      return;
+    }
+
+    if (_selectedDate == null) {
+      Helpers.showSnackbar(context, 'Please select a booking date', isError: true);
+      return;
+    }
+
+    // Check if date is in the past
+    if (_selectedDate!.isBefore(DateTime.now())) {
+      Helpers.showSnackbar(context, 'Please select a future date', isError: true);
+      return;
+    }
+
+    final userId = await SharedPref.getUserId();
+    if (userId.isEmpty) {
+      Helpers.showSnackbar(context, 'Please login to book an artist', isError: true);
+      return;
+    }
+
+    // Validate payment ID for online payment
+    if (_selectedPaymentMethod == 'online' &&
+        _paymentIdController.text.trim().isEmpty) {
+      Helpers.showSnackbar(context, 'Payment ID is required for online payment', isError: true);
+      return;
+    }
 
     final hasInternet = await Helpers.checkInternetBeforeApiCall(context);
     if (!hasInternet) return;
 
-    setState(() => _isSubmitting = true);
-
-    final customerId = SharedPref.getUserId();
-    if (customerId.isEmpty) {
-      Helpers.showSnackbar(context, 'User not found', isError: true);
-      setState(() => _isSubmitting = false);
-      return;
-    }
-
-    // Combine date and time
-    final bookingDateTime = DateTime(
-      _selectedDate.year,
-      _selectedDate.month,
-      _selectedDate.day,
-      _selectedTime.hour,
-      _selectedTime.minute,
-    );
-
-    // Format date as YYYY-MM-DD for API
-    final formattedDate = '${_selectedDate.year}-${_selectedDate.month.toString().padLeft(2, '0')}-${_selectedDate.day.toString().padLeft(2, '0')}';
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
 
     try {
+      print('Submitting booking...');
+      print('Customer ID: $userId');
+      print('Artist ID: ${widget.artist.id}');
+      print('Date: ${DateFormat('yyyy-MM-dd').format(_selectedDate!)}');
+      print('Payment Method: $_selectedPaymentMethod');
+
       final result = await ApiService.addBooking(
-        customerId: int.parse(customerId),
-        artistId: widget.artistId,
-        bookingDate: formattedDate,
+        customerId: int.parse(userId),
+        artistId: widget.artist.id!,
+        bookingDate: DateFormat('yyyy-MM-dd').format(_selectedDate!),
         eventAddress: _eventAddressController.text.trim(),
-        paymentType: _selectedPaymentType,
-        paymentId: _selectedPaymentType == 'online' ? _paymentIdController.text.trim() : '',
+        paymentType: _selectedPaymentMethod,
+        paymentId: _selectedPaymentMethod == 'online'
+            ? _paymentIdController.text.trim()
+            : '',
       );
 
+      print('Booking result: $result');
+
       if (result['success'] == true) {
-        Helpers.showSnackbar(context, 'Booking confirmed successfully!');
+        Helpers.showSnackbar(context, 'Booking successful!');
 
-        if (!mounted) return;
-        Navigator.pop(context);
-
-        // Navigate to booking details or bookings list
-        // Navigator.pushNamed(context, AppRoutes.customerBookingDetail,
-        //   arguments: {'booking': result['data']});
-      } else {
-        Helpers.showSnackbar(
+        // Navigate back to bookings list
+        Navigator.pushNamedAndRemoveUntil(
           context,
-          result['message'] ?? 'Failed to create booking',
-          isError: true,
+          AppRoutes.customerDashboard,
+              (route) => false,
         );
+        Navigator.pushNamed(context, AppRoutes.customerBookings);
+      } else {
+        setState(() {
+          _errorMessage = result['message'] ?? 'Booking failed';
+        });
+        Helpers.showSnackbar(context, _errorMessage!, isError: true);
       }
     } catch (e) {
-      Helpers.showSnackbar(context, 'Error: $e', isError: true);
+      print('Booking error: $e');
+      setState(() {
+        _errorMessage = 'Error: ${e.toString()}';
+      });
+      Helpers.showSnackbar(context, _errorMessage!, isError: true);
     } finally {
-      setState(() => _isSubmitting = false);
+      setState(() => _isLoading = false);
     }
   }
+  // Future<void> _submitBooking() async {
+  //   // Check if artist has a valid price
+  //   if (_totalAmount == 0) {
+  //     Helpers.showSnackbar(
+  //         context,
+  //         'This artist does not have fixed pricing. Please contact them directly.',
+  //         isError: true
+  //     );
+  //
+  //     // Optionally show a contact dialog
+  //     _showContactDialog();
+  //     return;
+  //   }
+  //
+  //   if (!_formKey.currentState!.validate()) {
+  //     return;
+  //   }
+  //
+  //   if (_selectedDate == null) {
+  //     Helpers.showSnackbar(context, 'Please select a booking date', isError: true);
+  //     return;
+  //   }
+  //
+  //   // Rest of your validation...
+  // }
 
+  void _showContactDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Contact ${widget.artist.name}'),
+        content: Text(
+            '${widget.artist.name} does not have fixed pricing listed. '
+                'Please contact them directly to discuss your event requirements and get a quote.'
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
+  }
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
       appBar: AppBar(
+        iconTheme: IconThemeData(color: AppColors.white),
         title: const Text('Book Artist'),
+        backgroundColor: AppColors.primaryColor,
+        foregroundColor: AppColors.white,
+        elevation: 0,
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(20),
         child: Form(
           key: _formKey,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Artist info
+              // Artist Info
               _buildArtistInfo(),
 
               const SizedBox(height: 24),
 
-              // Booking details header
-              const Text(
-                'Booking Details',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.textColor,
-                ),
-              ),
-              const SizedBox(height: 16),
-
-              // Date and time selection
-              _buildDateTimeSelection(),
+              // Booking Date
+              _buildDatePicker(),
 
               const SizedBox(height: 20),
 
-              // Event address
+              // Event Address
+// In BookingScreen, update the CustomTextField for event address:
               CustomTextField(
                 controller: _eventAddressController,
-                labelText: 'Event Address',
-                hintText: 'Enter the event location',
-                maxLines: 2,
-                prefixIcon: const Icon(Icons.location_on_outlined, color: AppColors.darkGrey),
-                validator: (value) => Helpers.validateRequired(value, 'Event address'),
+                labelText: 'Event Address *',
+                hintText: 'Enter venue address (e.g., Wedding Hall, Mumbai)',
+                maxLines: 3,
+                prefixIcon: const Icon(Icons.location_on_outlined),
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Please enter event address';
+                  }
+                  if (value.length < 5) { // Reduced from 10 to 5
+                    return 'Address is too short. Please provide more details';
+                  }
+                  return null;
+                },
               ),
-
               const SizedBox(height: 20),
 
-              // Special requests
-              CustomTextField(
-                controller: _specialRequestController,
-                labelText: 'Special Requests (Optional)',
-                hintText: 'Any special requirements or notes...',
-                maxLines: 3,
-                prefixIcon: const Icon(Icons.note_outlined, color: AppColors.darkGrey),
-              ),
+              // Payment Method
+              _buildPaymentMethod(),
 
-              const SizedBox(height: 24),
+              // Payment ID (if online)
+              _buildPaymentIdField(),
 
-              // Payment section
-              _buildPaymentSection(),
+              const SizedBox(height: 30),
 
-              const SizedBox(height: 32),
+              // Booking Summary
+              _buildBookingSummary(),
 
-              // Submit button
+              const SizedBox(height: 30),
+
+              // Error message
+              if (_errorMessage != null)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 16),
+                  child: Text(
+                    _errorMessage!,
+                    style: const TextStyle(
+                      color: AppColors.errorColor,
+                      fontSize: 14,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+
+              // Confirm Booking Button
               CustomButton(
-                text: _isSubmitting ? 'Processing...' : 'Confirm Booking',
-                onPressed:  _submitBooking,
-                isLoading: _isSubmitting,
+                text: 'Confirm Booking',
+                onPressed: _submitBooking,
+                isLoading: _isLoading,
                 backgroundColor: AppColors.primaryColor,
               ),
-
-              const SizedBox(height: 16),
-
-              // Terms and conditions
-              _buildTermsAndConditions(),
             ],
           ),
         ),
@@ -218,337 +359,335 @@ class _BookingScreenState extends State<BookingScreen> {
     );
   }
 
+
   Widget _buildArtistInfo() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 6,
-            offset: const Offset(0, 2),
-          ),
-        ],
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
       ),
-      child: Row(
-        children: [
-          Container(
-            width: 60,
-            height: 60,
-            decoration: BoxDecoration(
-              color: AppColors.primaryColor.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(30),
-            ),
-            child: Center(
-              child: Text(
-                Helpers.getInitials(widget.artistName),
-                style: const TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.primaryColor,
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  widget.artistName,
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.textColor,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                const Text(
-                  'You are booking this artist for your event',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: AppColors.darkGrey,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildDateTimeSelection() {
-    final formattedDate = '${_selectedDate.day}/${_selectedDate.month}/${_selectedDate.year}';
-    final formattedTime = '${_selectedTime.hour.toString().padLeft(2, '0')}:${_selectedTime.minute.toString().padLeft(2, '0')}';
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'Date & Time',
-          style: TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w500,
-            color: AppColors.textColor,
-          ),
-        ),
-        const SizedBox(height: 8),
-        Row(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
           children: [
-            Expanded(
-              child: InkWell(
-                onTap: () => _selectDate(context),
-                child: Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: AppColors.white,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: AppColors.lightGrey),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(Icons.calendar_today, color: AppColors.primaryColor),
-                      const SizedBox(width: 12),
-                      Text(
-                        formattedDate,
-                        style: const TextStyle(
-                          fontSize: 14,
-                          color: AppColors.textColor,
-                        ),
-                      ),
-                    ],
+            Container(
+              width: 60,
+              height: 60,
+              decoration: BoxDecoration(
+                color: AppColors.primaryColor.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(30),
+              ),
+              child: Center(
+                child: Text(
+                  Helpers.getInitials(widget.artist.name ?? 'A'),
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.primaryColor,
                   ),
                 ),
               ),
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: 16),
             Expanded(
-              child: InkWell(
-                onTap: () => _selectTime(context),
-                child: Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: AppColors.white,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: AppColors.lightGrey),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    widget.artist.name ?? 'Artist',
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.textColor,
+                    ),
                   ),
-                  child: Row(
+                  const SizedBox(height: 4),
+                  if (widget.artist.category != null && widget.artist.category!.isNotEmpty)
+                    Text(
+                      widget.artist.category!,
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: AppColors.grey,
+                      ),
+                    ),
+                  const SizedBox(height: 4),
+                  Row(
                     children: [
-                      Icon(Icons.access_time, color: AppColors.primaryColor),
-                      const SizedBox(width: 12),
+                      Icon(Icons.star, color: AppColors.secondaryColor, size: 12),
+                      const SizedBox(width: 4),
                       Text(
-                        formattedTime,
-                        style: const TextStyle(
+                        widget.artist.avgRating?.toStringAsFixed(1) ?? '0.0',
+                        style: TextStyle(
                           fontSize: 14,
+                          fontWeight: FontWeight.w600,
                           color: AppColors.textColor,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        '(${widget.artist.totalReviews ?? 0} reviews)',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: AppColors.grey,
                         ),
                       ),
                     ],
                   ),
-                ),
+                ],
+              ),
+            ),
+            Text(
+              _formatDisplayPrice(), // Use the formatted price
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: AppColors.primaryColor,
               ),
             ),
           ],
         ),
-        const SizedBox(height: 8),
-        const Text(
-          'Note: Please ensure the artist is available on the selected date',
-          style: TextStyle(
-            fontSize: 11,
-            color: AppColors.darkGrey,
-          ),
-        ),
-      ],
+      ),
     );
   }
-
-  Widget _buildPaymentSection() {
+  Widget _buildDatePicker() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'Payment Method',
+        Text(
+          'Booking Date *',
           style: TextStyle(
-            fontSize: 18,
+            fontSize: 16,
             fontWeight: FontWeight.w600,
             color: AppColors.textColor,
           ),
         ),
-        const SizedBox(height: 12),
-        Row(
-          children: [
-            Expanded(
-              child: _buildPaymentOption(
-                type: 'cash',
-                label: 'Pay Cash',
-                icon: Icons.money,
-                color: AppColors.successColor,
-              ),
+        const SizedBox(height: 8),
+        GestureDetector(
+          onTap: () => _selectDate(context),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            decoration: BoxDecoration(
+              color: AppColors.white,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: AppColors.lightGrey),
             ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _buildPaymentOption(
-                type: 'online',
-                label: 'Pay Online',
-                icon: Icons.payment,
-                color: AppColors.primaryColor,
-              ),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.calendar_today,
+                  color: AppColors.primaryColor,
+                ),
+                const SizedBox(width: 12),
+                Text(
+                  _selectedDate != null
+                      ? DateFormat('dd MMM yyyy').format(_selectedDate!)
+                      : 'Select date',
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: _selectedDate != null
+                        ? AppColors.textColor
+                        : AppColors.grey,
+                  ),
+                ),
+                const Spacer(),
+                Icon(
+                  Icons.arrow_drop_down,
+                  color: AppColors.grey,
+                ),
+              ],
             ),
-          ],
+          ),
         ),
-        const SizedBox(height: 16),
-
-        if (_selectedPaymentType == 'online') ...[
-          CustomTextField(
-            controller: _paymentIdController,
-            labelText: 'Transaction ID',
-            hintText: 'Enter your payment transaction ID',
-            prefixIcon: const Icon(Icons.receipt_outlined, color: AppColors.darkGrey),
-            validator: (value) {
-              if (_selectedPaymentType == 'online' && (value == null || value.isEmpty)) {
-                return 'Transaction ID is required for online payment';
-              }
-              return null;
-            },
-          ),
-          const SizedBox(height: 8),
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: AppColors.primaryColor.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: AppColors.primaryColor.withOpacity(0.2)),
-            ),
-            child: const Text(
-              'Note: Please complete the payment first and then enter the transaction ID here',
-              style: TextStyle(
-                fontSize: 12,
-                color: AppColors.primaryColor,
-              ),
-            ),
-          ),
-        ] else ...[
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: AppColors.successColor.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: AppColors.successColor.withOpacity(0.2)),
-            ),
-            child: const Text(
-              'You will pay cash to the artist at the time of the event',
-              style: TextStyle(
-                fontSize: 12,
-                color: AppColors.successColor,
-              ),
-            ),
-          ),
-        ],
       ],
     );
   }
 
-  Widget _buildPaymentOption({
-    required String type,
-    required String label,
-    required IconData icon,
-    required Color color,
-  }) {
-    final isSelected = _selectedPaymentType == type;
-
-    return InkWell(
-      onTap: () {
-        setState(() => _selectedPaymentType = type);
-      },
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: isSelected ? color.withOpacity(0.2) : AppColors.white,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: isSelected ? color : AppColors.lightGrey,
-            width: isSelected ? 2 : 1,
-          ),
-        ),
-        child: Column(
-          children: [
-            Icon(icon, color: isSelected ? color : AppColors.darkGrey),
-            const SizedBox(height: 8),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
-                color: isSelected ? color : AppColors.textColor,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildTermsAndConditions() {
+  Widget _buildPaymentMethod() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          children: [
-            Checkbox(
-              value: true,
-              onChanged: null,
-              activeColor: AppColors.primaryColor,
-            ),
-            const Expanded(
-              child: Text(
-                'I agree to the terms and conditions',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: AppColors.darkGrey,
-                ),
-              ),
-            ),
-          ],
+        Text(
+          'Payment Method *',
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+            color: AppColors.textColor,
+          ),
         ),
         const SizedBox(height: 8),
         Container(
-          padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
             color: AppColors.white,
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(12),
             border: Border.all(color: AppColors.lightGrey),
           ),
-          child: const Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          child: Column(
             children: [
-              Text(
-                'Important Notes:',
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.textColor,
-                ),
+              RadioListTile(
+                title: const Text('Cash on Delivery'),
+                value: 'cash',
+                groupValue: _selectedPaymentMethod,
+                onChanged: (value) {
+                  setState(() {
+                    _selectedPaymentMethod = value.toString();
+                  });
+                },
+                activeColor: AppColors.primaryColor,
               ),
-              SizedBox(height: 4),
-              Text(
-                '• Booking can be cancelled up to 24 hours before the event\n'
-                    '• 50% refund for cancellations within 24 hours\n'
-                    '• Artist may request advance payment\n'
-                    '• Please arrive at the venue on time',
-                style: TextStyle(
-                  fontSize: 11,
-                  color: AppColors.darkGrey,
-                  height: 1.4,
-                ),
+              RadioListTile(
+                title: const Text('Online Payment'),
+                value: 'online',
+                groupValue: _selectedPaymentMethod,
+                onChanged: (value) {
+                  setState(() {
+                    _selectedPaymentMethod = value.toString();
+                  });
+                },
+                activeColor: AppColors.primaryColor,
               ),
             ],
           ),
         ),
       ],
     );
+  }
+
+  Widget _buildPaymentIdField() {
+    if (_selectedPaymentMethod != 'online') return const SizedBox();
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 20),
+      child: CustomTextField(
+        controller: _paymentIdController,
+        labelText: 'Payment Transaction ID *',
+        hintText: 'Enter payment transaction ID',
+        prefixIcon: const Icon(Icons.payment),
+        validator: (value) {
+          if (_selectedPaymentMethod == 'online' &&
+              (value == null || value.isEmpty)) {
+            return 'Payment ID is required for online payment';
+          }
+          return null;
+        },
+      ),
+    );
+  }
+
+  // Widget _buildBookingSummary() {
+  //   return Card(
+  //     elevation: 2,
+  //     shape: RoundedRectangleBorder(
+  //       borderRadius: BorderRadius.circular(16),
+  //     ),
+  //     child: Padding(
+  //       padding: const EdgeInsets.all(16),
+  //       child: Column(
+  //         crossAxisAlignment: CrossAxisAlignment.start,
+  //         children: [
+  //           Text(
+  //             'Booking Summary',
+  //             style: TextStyle(
+  //               fontSize: 18,
+  //               fontWeight: FontWeight.bold,
+  //               color: AppColors.textColor,
+  //             ),
+  //           ),
+  //           const SizedBox(height: 16),
+  //           _buildSummaryItem(
+  //             'Artist Fee',
+  //             '₹${widget.artist.price ?? '0'}',
+  //           ),
+  //           const Divider(height: 24),
+  //           _buildSummaryItem(
+  //             'Total Amount',
+  //             '₹$_totalAmount',
+  //             isTotal: true,
+  //           ),
+  //         ],
+  //       ),
+  //     ),
+  //   );
+  // }
+  Widget _buildBookingSummary() {
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Booking Summary',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: AppColors.textColor,
+              ),
+            ),
+            const SizedBox(height: 16),
+            _buildSummaryItem(
+              'Artist Fee',
+              _formatDisplayPrice(), // Use formatted price here too
+            ),
+            const Divider(height: 24),
+            _buildSummaryItem(
+              'Total Amount',
+              _totalAmount > 0 ? '₹$_totalAmount' : 'Contact Artist',
+              isTotal: true,
+            ),
+            // Add a note if price is 0
+            if (_totalAmount == 0)
+              Padding(
+                padding: const EdgeInsets.only(top: 12),
+                child: Text(
+                  'Note: This artist does not have fixed pricing. '
+                      'Please contact them for a custom quote.',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: AppColors.warningColor ?? Colors.orange,
+                    fontStyle: FontStyle.italic,
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+  Widget _buildSummaryItem(String label, String value, {bool isTotal = false}) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: isTotal ? 18 : 16,
+              fontWeight: isTotal ? FontWeight.bold : FontWeight.normal,
+              color: AppColors.textColor,
+            ),
+          ),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: isTotal ? 20 : 16,
+              fontWeight: isTotal ? FontWeight.bold : FontWeight.w600,
+              color: isTotal ? AppColors.primaryColor : AppColors.textColor,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  void dispose() {
+    _eventAddressController.dispose();
+    _paymentIdController.dispose();
+    super.dispose();
   }
 }

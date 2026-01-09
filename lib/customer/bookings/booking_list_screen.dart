@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:artist_hub/core/constants/app_colors.dart';
-import 'package:artist_hub/core/constants/app_strings.dart';
 import 'package:artist_hub/core/routes/app_routes.dart';
 import 'package:artist_hub/core/services/api_service.dart';
 import 'package:artist_hub/core/services/shared_pref.dart';
@@ -8,6 +7,9 @@ import 'package:artist_hub/core/widgets/loading_widget.dart';
 import 'package:artist_hub/core/widgets/no_data_widget.dart';
 import 'package:artist_hub/models/booking_model.dart';
 import 'package:artist_hub/utils/helpers.dart';
+
+import '../../core/widgets/custom_button.dart';
+import '../reviews/add_review_screen.dart';
 
 class BookingListScreen extends StatefulWidget {
   const BookingListScreen({super.key});
@@ -36,27 +38,54 @@ class _BookingListScreenState extends State<BookingListScreen> {
       _hasError = false;
     });
 
-    final userId = SharedPref.getUserId();
-    if (userId.isEmpty) {
-      setState(() {
-        _isLoading = false;
-        _hasError = true;
-      });
-      return;
-    }
-
     try {
-      final result = await ApiService.getBookingsByCustomer(customerId: int.parse(userId));
-      if (result['success'] == true && result['data'] != null) {
-        final List<dynamic> data = result['data'];
+      final userId = await SharedPref.getUserId();
+      if (userId.isEmpty) {
         setState(() {
-          _bookings = data.map((item) => BookingModel.fromJson(item)).toList();
-          _applyFilters();
+          _isLoading = false;
+          _hasError = true;
         });
+        Helpers.showSnackbar(context, 'Please login first', isError: true);
+        return;
+      }
+
+      print('Loading bookings for user ID: $userId');
+
+      final result = await ApiService.getBookingsByCustomer(customerId: int.parse(userId));
+
+      print('Bookings API Result: ${result['success']}');
+      print('Bookings Data: ${result['data']}');
+
+      if (result['success'] == true) {
+        if (result['data'] is List) {
+          final List<dynamic> data = result['data'];
+          final List<BookingModel> bookings = [];
+
+          for (var item in data) {
+            try {
+              bookings.add(BookingModel.fromJson(item));
+            } catch (e) {
+              print('Error parsing booking item: $e');
+              print('Item data: $item');
+            }
+          }
+
+          setState(() {
+            _bookings = bookings;
+            _applyFilters();
+          });
+        } else {
+          print('Invalid bookings data format: ${result['data']}');
+          setState(() {
+            _hasError = true;
+          });
+        }
       } else {
+        print('Failed to load bookings: ${result['message']}');
         setState(() => _hasError = true);
       }
     } catch (e) {
+      print('Error loading bookings: $e');
       setState(() => _hasError = true);
     } finally {
       setState(() => _isLoading = false);
@@ -106,7 +135,7 @@ class _BookingListScreenState extends State<BookingListScreen> {
     Navigator.pushNamed(
       context,
       AppRoutes.customerBookingDetail,
-      arguments: {'booking': booking},
+      arguments: booking,
     );
   }
 
@@ -125,8 +154,11 @@ class _BookingListScreenState extends State<BookingListScreen> {
 
     if (!confirmed) return;
 
-    final userId = SharedPref.getUserId();
-    if (userId.isEmpty) return;
+    final userId = await SharedPref.getUserId();
+    if (userId.isEmpty) {
+      Helpers.showSnackbar(context, 'Please login first', isError: true);
+      return;
+    }
 
     try {
       final result = await ApiService.cancelBookingByCustomer(
@@ -152,15 +184,19 @@ class _BookingListScreenState extends State<BookingListScreen> {
 
   void _addReview(BookingModel booking) {
     if (booking.isCompleted && !booking.isCancelled) {
-      Navigator.pushNamed(
+      Navigator.push(
         context,
-        AppRoutes.addReview,
-        arguments: {
-          'bookingId': booking.id,
-          'artistId': booking.artistId,
-          'artistName': booking.artistName,
-        },
-      );
+        MaterialPageRoute(
+          builder: (context) => AddReviewScreen(
+            bookingId: booking.id, // ✅ int
+            artistId: booking.artistId, // ✅ int
+            artistName: booking.artistName ?? 'Artist', // ✅ String
+          ),
+        ),
+      ).then((_) {
+        // Refresh bookings after review
+        _loadBookings();
+      });
     }
   }
 
@@ -211,15 +247,12 @@ class _BookingListScreenState extends State<BookingListScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
+        iconTheme: const IconThemeData(color: Colors.white),
         backgroundColor: AppColors.primaryColor,
-        title: const Text('My Bookings', style: TextStyle(color: AppColors.white),),
+        title: const Text('My Bookings', style: TextStyle(color: Colors.white)),
         actions: [
           IconButton(
-            icon: const Icon(Icons.search,color: AppColors.white,),
-            onPressed: _showSearchDialog,
-          ),
-          IconButton(
-            icon: const Icon(Icons.refresh, color: AppColors.white,),
+            icon: const Icon(Icons.refresh, color: Colors.white),
             onPressed: _loadBookings,
           ),
         ],
@@ -297,7 +330,7 @@ class _BookingListScreenState extends State<BookingListScreen> {
         onPressed: () => _changeTab(tab),
         style: ElevatedButton.styleFrom(
           backgroundColor: isSelected ? AppColors.primaryColor : AppColors.white,
-          foregroundColor: isSelected ? AppColors.white : AppColors.darkGrey,
+          foregroundColor: isSelected ? Colors.white : AppColors.darkGrey,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(8),
             side: BorderSide(
@@ -321,7 +354,7 @@ class _BookingListScreenState extends State<BookingListScreen> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                 decoration: BoxDecoration(
-                  color: isSelected ? AppColors.white : AppColors.primaryColor,
+                  color: isSelected ? Colors.white : AppColors.primaryColor,
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Text(
@@ -329,7 +362,7 @@ class _BookingListScreenState extends State<BookingListScreen> {
                   style: TextStyle(
                     fontSize: 10,
                     fontWeight: FontWeight.w600,
-                    color: isSelected ? AppColors.primaryColor : AppColors.white,
+                    color: isSelected ? AppColors.primaryColor : Colors.white,
                   ),
                 ),
               ),
@@ -503,7 +536,7 @@ class _BookingListScreenState extends State<BookingListScreen> {
                       label: const Text('Add Review'),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.secondaryColor,
-                        foregroundColor: AppColors.white,
+                        foregroundColor: Colors.white,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(8),
                         ),
@@ -550,46 +583,6 @@ class _BookingListScreenState extends State<BookingListScreen> {
           fontWeight: FontWeight.w500,
           color: color,
         ),
-      ),
-    );
-  }
-
-  void _showSearchDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Search Bookings'),
-        content: TextField(
-          autofocus: true,
-          decoration: InputDecoration(
-            hintText: 'Search by artist name or location...',
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-            ),
-          ),
-          onChanged: (value) {
-            setState(() {
-              _searchQuery = value;
-              _applyFilters();
-            });
-          },
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              setState(() {
-                _searchQuery = '';
-                _applyFilters();
-              });
-              Navigator.pop(context);
-            },
-            child: const Text('Clear'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Close'),
-          ),
-        ],
       ),
     );
   }

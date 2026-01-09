@@ -4,8 +4,42 @@ import 'package:http/http.dart' as http;
 import 'package:artist_hub/core/constants/api_endpoints.dart';
 
 class ApiService {
-  static const Duration timeout = Duration(seconds: 30);
+  static const String baseUrl = "https://prakrutitech.xyz/gaurang/";
 
+  static const Duration timeout = Duration(seconds: 30);
+// Add this to your Helpers class or create a test file
+  Future<void> testMediaApi() async {
+    try {
+      print('Testing Media API Endpoints...');
+
+      // Test 1: view_artist_media_by_id.php
+      final response1 = await http.get(
+        Uri.parse('https://prakrutitech.xyz/gaurang/view_artist_media_by_id.php?artist_id=26'),
+      );
+      print('Test 1 - view_artist_media_by_id.php:');
+      print('Status: ${response1.statusCode}');
+      print('Body: ${response1.body}');
+
+      // Test 2: get_media.php
+      final response2 = await http.get(
+        Uri.parse('https://prakrutitech.xyz/gaurang/get_media.php'),
+      );
+      print('\nTest 2 - get_media.php:');
+      print('Status: ${response2.statusCode}');
+      print('Body: ${response2.body}');
+
+      // Test 3: view_artist_media.php
+      final response3 = await http.get(
+        Uri.parse('https://prakrutitech.xyz/gaurang/view_artist_media.php?artist_id=26'),
+      );
+      print('\nTest 3 - view_artist_media.php:');
+      print('Status: ${response3.statusCode}');
+      print('Body: ${response3.body}');
+
+    } catch (e) {
+      print('API Test Error: $e');
+    }
+  }
   // Helper method to handle responses
   static Map<String, dynamic> _parseResponse(http.Response response) {
     try {
@@ -359,15 +393,112 @@ class ApiService {
 
   // ============ ARTIST MEDIA ============
   // In your getArtistMedia method in ApiService:
+  // In ApiService class, update these methods
+
+// Fix: Use correct endpoint for artist media
+// Replace your current getArtistMedia method with this:
   static Future<Map<String, dynamic>> getArtistMedia({required int artistId}) async {
     try {
-      print('Fetching media for artist ID: $artistId');
+      print('🔍 Fetching media for artist ID: $artistId');
+
+      // First, let's try the correct endpoint - based on your PHP file
       final response = await http.get(
-        Uri.parse('${ApiEndpoints.baseUrl}view_artist_media.php?artist_id=$artistId'),
+        Uri.parse('${baseUrl}view_artist_media_by_id.php?artist_id=$artistId'),
       ).timeout(timeout);
 
-      print('Response status: ${response.statusCode}');
-      print('Response body: ${response.body}');
+      print('📡 Response status: ${response.statusCode}');
+      print('📡 Response body: ${response.body}');
+
+      final data = _parseResponse(response);
+
+      // Check different response structures
+      if (data['status'] == true || data['success'] == true) {
+        print('✅ API Success');
+
+        // Handle different data structures
+        dynamic mediaData;
+
+        if (data['data'] != null) {
+          mediaData = data['data'];
+        } else if (data['media'] != null) {
+          mediaData = data['media'];
+        } else {
+          mediaData = [];
+        }
+
+        // Make sure it's a list
+        if (mediaData is! List) {
+          if (mediaData is Map) {
+            mediaData = [mediaData];
+          } else {
+            mediaData = [];
+          }
+        }
+
+        print('📦 Number of media items: ${mediaData.length}');
+        if (mediaData.isNotEmpty && mediaData[0] is Map) {
+          print('📦 First item keys: ${(mediaData[0] as Map).keys.toList()}');
+        }
+
+        return {
+          'success': true,
+          'message': data['message'] ?? 'Media fetched successfully',
+          'data': mediaData,
+        };
+      } else {
+        print('❌ API Failed: ${data['message']}');
+        return {
+          'success': false,
+          'message': data['message'] ?? 'Failed to fetch media',
+          'data': [],
+        };
+      }
+    } catch (e) {
+      print('❌ Network Error: $e');
+      return {
+        'success': false,
+        'message': 'Network error: $e',
+        'data': [],
+      };
+    }
+  }
+// Alternative: Try get_media.php endpoint
+  static Future<Map<String, dynamic>> getAllMedia() async {
+    try {
+      final response = await http.get(
+        Uri.parse('${baseUrl}get_media.php'),
+      ).timeout(timeout);
+
+      final data = _parseResponse(response);
+
+      if (data['status'] == true) {
+        return {
+          'success': true,
+          'message': data['message'] ?? 'All media fetched successfully',
+          'data': data['data'] ?? [],
+        };
+      }
+
+      return {
+        'success': false,
+        'message': data['message'] ?? 'Failed to fetch media',
+        'data': [],
+      };
+    } catch (e) {
+      return {
+        'success': false,
+        'message': 'Network error: $e',
+        'data': [],
+      };
+    }
+  }
+
+// Get media by specific media ID
+  static Future<Map<String, dynamic>> getMediaById(int mediaId) async {
+    try {
+      final response = await http.get(
+        Uri.parse('${baseUrl}view_artist_media_by_id.php?media_id=$mediaId'),
+      ).timeout(timeout);
 
       final data = _parseResponse(response);
 
@@ -375,21 +506,20 @@ class ApiService {
         return {
           'success': true,
           'message': data['message'] ?? 'Media fetched successfully',
-          'data': data['data'] ?? data,
+          'data': data['data'] ?? [],
         };
       }
 
       return {
         'success': false,
         'message': data['message'] ?? 'Failed to fetch media',
-        'data': null,
+        'data': [],
       };
     } catch (e) {
-      print('Error fetching media: $e');
       return {
         'success': false,
         'message': 'Network error: $e',
-        'data': null,
+        'data': [],
       };
     }
   }
@@ -400,27 +530,48 @@ class ApiService {
     String caption = '',
   }) async {
     try {
+      print('=== API SERVICE: ADD ARTIST MEDIA ===');
+      print('Artist ID: $artistId');
+      print('Media Type: $mediaType');
+      print('Caption: $caption');
+      print('File Path: ${mediaFile.path}');
+      print('File Size: ${await mediaFile.length()} bytes');
+
+      // Create multipart request
       var request = http.MultipartRequest(
         'POST',
-        Uri.parse(ApiEndpoints.addArtistMedia),
+        Uri.parse('${baseUrl}add_artist_media.php'), // Make sure this is correct!
       );
 
-      request.files.add(await http.MultipartFile.fromPath(
-        'media',
-        mediaFile.path,
-      ));
-
+      // Add fields
       request.fields['artist_id'] = artistId.toString();
       request.fields['media_type'] = mediaType;
       if (caption.isNotEmpty) {
         request.fields['caption'] = caption;
       }
 
-      final streamedResponse = await request.send().timeout(timeout);
-      final response = await http.Response.fromStream(streamedResponse);
-      final data = _parseResponse(response);
+      // Add file
+      request.files.add(
+        await http.MultipartFile.fromPath(
+          'media',  // This must match PHP $_FILES['media']
+          mediaFile.path,
+          filename: mediaFile.path.split('/').last,
+        ),
+      );
 
-      if (data['status'] == true) {
+      print('📤 Sending multipart request...');
+      final streamedResponse = await request.send();
+      print('📤 Request sent, getting response...');
+
+      final response = await http.Response.fromStream(streamedResponse);
+      print('📤 Response Status: ${response.statusCode}');
+      print('📤 Response Body: ${response.body}');
+
+      final data = _parseResponse(response);
+      print('📤 Parsed Response: $data');
+
+      if (data['status'] == true || data['success'] == true) {
+        print('✅ API: Upload successful');
         return {
           'success': true,
           'message': data['message'] ?? 'Media uploaded successfully',
@@ -428,12 +579,15 @@ class ApiService {
         };
       }
 
+      print('❌ API: Upload failed');
       return {
         'success': false,
         'message': data['message'] ?? 'Failed to upload media',
         'data': null,
       };
     } catch (e) {
+      print('❌ API Exception: $e');
+      print('Stack trace: ${e.toString()}');
       return {
         'success': false,
         'message': 'Upload failed: $e',
@@ -444,40 +598,37 @@ class ApiService {
 
 
   // ============ BOOKINGS ============
-  static Future<Map<String, dynamic>> addBooking({
-    required int customerId,
-    required int artistId,
-    required String bookingDate,
-    required String eventAddress,
-    required String paymentType,
-    String paymentId = '',
+
+  static Future<Map<String, dynamic>> updateBooking({
+    required int bookingId,
+    String? status,
+    String? bookingDate,
+    String? eventAddress,
   }) async {
     try {
       final response = await http.post(
-        Uri.parse(ApiEndpoints.addBooking),
+        Uri.parse('${baseUrl}update_bookings.php'), // Use your actual API filename
         body: {
-          'customer_id': customerId.toString(),
-          'artist_id': artistId.toString(),
-          'booking_date': bookingDate,
-          'event_address': eventAddress,
-          'payment_type': paymentType,
-          'payment_id': paymentId,
+          'booking_id': bookingId.toString(),
+          if (status != null) 'status': status,
+          if (bookingDate != null) 'booking_date': bookingDate,
+          if (eventAddress != null) 'event_address': eventAddress,
         },
       ).timeout(timeout);
 
       final data = _parseResponse(response);
 
-      if (data['status'] == true) {
+      if (data['status'] == true || data['success'] == true) {
         return {
           'success': true,
-          'message': data['message'] ?? 'Booking added successfully',
+          'message': data['message'] ?? 'Booking updated successfully',
           'data': data['data'] ?? data,
         };
       }
 
       return {
         'success': false,
-        'message': data['message'] ?? 'Failed to add booking',
+        'message': data['message'] ?? 'Failed to update booking',
         'data': null,
       };
     } catch (e) {
@@ -488,7 +639,6 @@ class ApiService {
       };
     }
   }
-
   static Future<Map<String, dynamic>> getBookingsByArtist({required int artistId}) async {
     try {
       final response = await http.get(
@@ -518,12 +668,20 @@ class ApiService {
       };
     }
   }
+  //new
+  // In ApiService class, add/update these methods:
 
+// Fix: Get bookings by customer ID
   static Future<Map<String, dynamic>> getBookingsByCustomer({required int customerId}) async {
     try {
+      print('Fetching bookings for customer ID: $customerId');
+
       final response = await http.get(
-        Uri.parse('${ApiEndpoints.viewBookingById}?customer_id=$customerId'),
+        Uri.parse('${baseUrl}view_booking.php?customer_id=$customerId'),
       ).timeout(timeout);
+
+      print('Bookings API Response: ${response.statusCode}');
+      print('Bookings API Body: ${response.body}');
 
       final data = _parseResponse(response);
 
@@ -531,7 +689,7 @@ class ApiService {
         return {
           'success': true,
           'message': data['message'] ?? 'Bookings fetched successfully',
-          'data': data['data'] ?? data,
+          'data': data['data'] ?? [],
         };
       }
 
@@ -541,6 +699,7 @@ class ApiService {
         'data': null,
       };
     } catch (e) {
+      print('Bookings API Error: $e');
       return {
         'success': false,
         'message': 'Network error: $e',
@@ -548,6 +707,105 @@ class ApiService {
       };
     }
   }
+
+// Fix: Cancel booking by customer
+  static Future<Map<String, dynamic>> cancelBookingByCustomer({
+    required int bookingId,
+    required int customerId,
+    required String cancelReason,
+  }) async {
+    try {
+      print('Cancelling booking: bookingId=$bookingId, customerId=$customerId');
+
+      final response = await http.post(
+        Uri.parse('${baseUrl}customer_booking_cancel.php'),
+        body: {
+          'booking_id': bookingId.toString(),
+          'customer_id': customerId.toString(),
+          'cancel_reason': cancelReason,
+        },
+      ).timeout(timeout);
+
+      print('Cancel Booking Response: ${response.statusCode}');
+      print('Cancel Booking Body: ${response.body}');
+
+      final data = _parseResponse(response);
+
+      if (data['status'] == true) {
+        return {
+          'success': true,
+          'message': data['message'] ?? 'Booking cancelled successfully',
+          'data': data['data'] ?? data,
+        };
+      }
+
+      return {
+        'success': false,
+        'message': data['message'] ?? 'Failed to cancel booking',
+        'data': null,
+      };
+    } catch (e) {
+      print('Cancel Booking API Exception: $e');
+      return {
+        'success': false,
+        'message': 'Network error: $e',
+        'data': null,
+      };
+    }
+  }
+
+// Fix: Add booking
+  static Future<Map<String, dynamic>> addBooking({
+    required int customerId,
+    required int artistId,
+    required String bookingDate,
+    required String eventAddress,
+    required String paymentType,
+    String paymentId = '',
+  }) async {
+    try {
+      print('Adding booking: customerId=$customerId, artistId=$artistId');
+
+      final response = await http.post(
+        Uri.parse('${baseUrl}add_bookings.php'),
+        body: {
+          'customer_id': customerId.toString(),
+          'artist_id': artistId.toString(),
+          'booking_date': bookingDate,
+          'event_address': eventAddress,
+          'payment_type': paymentType,
+          'payment_id': paymentId,
+        },
+      ).timeout(timeout);
+
+      print('Add Booking Response: ${response.statusCode}');
+      print('Add Booking Body: ${response.body}');
+
+      final data = _parseResponse(response);
+
+      if (data['status'] == true) {
+        return {
+          'success': true,
+          'message': data['message'] ?? 'Booking added successfully',
+          'data': data['data'] ?? data,
+        };
+      }
+
+      return {
+        'success': false,
+        'message': data['message'] ?? 'Failed to add booking',
+        'data': null,
+      };
+    } catch (e) {
+      print('Add Booking API Exception: $e');
+      return {
+        'success': false,
+        'message': 'Network error: $e',
+        'data': null,
+      };
+    }
+  }
+
 
   static Future<Map<String, dynamic>> cancelBookingByArtist({
     required int bookingId,
@@ -588,44 +846,6 @@ class ApiService {
     }
   }
 
-  static Future<Map<String, dynamic>> cancelBookingByCustomer({
-    required int bookingId,
-    required int customerId,
-    required String cancelReason,
-  }) async {
-    try {
-      final response = await http.post(
-        Uri.parse(ApiEndpoints.customerBookingCancel),
-        body: {
-          'booking_id': bookingId.toString(),
-          'customer_id': customerId.toString(),
-          'cancel_reason': cancelReason,
-        },
-      ).timeout(timeout);
-
-      final data = _parseResponse(response);
-
-      if (data['status'] == true) {
-        return {
-          'success': true,
-          'message': data['message'] ?? 'Booking cancelled successfully',
-          'data': data['data'] ?? data,
-        };
-      }
-
-      return {
-        'success': false,
-        'message': data['message'] ?? 'Failed to cancel booking',
-        'data': null,
-      };
-    } catch (e) {
-      return {
-        'success': false,
-        'message': 'Network error: $e',
-        'data': null,
-      };
-    }
-  }
 
   // ============ REVIEWS ============
   static Future<Map<String, dynamic>> addReview({

@@ -13,7 +13,8 @@ class CustomerDashboardScreen extends StatefulWidget {
   const CustomerDashboardScreen({super.key});
 
   @override
-  State<CustomerDashboardScreen> createState() => _CustomerDashboardScreenState();
+  State<CustomerDashboardScreen> createState() =>
+      _CustomerDashboardScreenState();
 }
 
 class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> {
@@ -57,7 +58,9 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> {
       }
 
       // Load upcoming bookings
-      final bookingsResult = await ApiService.getBookingsByCustomer(customerId: int.parse(userId));
+      final bookingsResult = await ApiService.getBookingsByCustomer(
+        customerId: int.parse(userId),
+      );
       if (bookingsResult['success'] == true && bookingsResult['data'] != null) {
         final List<dynamic> bookingsData = bookingsResult['data'];
         setState(() {
@@ -83,18 +86,13 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> {
       backgroundColor: AppColors.background,
       appBar: AppBar(
         backgroundColor: AppColors.primaryColor,
-        title: const Text('Artist Hub',style: TextStyle(
-          color: AppColors.white
-        ),),
+        title: const Text(
+          'Artist Hub',
+          style: TextStyle(color: AppColors.white),
+        ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.notifications_outlined, color: AppColors.white,),
-            onPressed: () {
-              // Navigate to notification
-            },
-          ),
-          IconButton(
-            icon: const Icon(Icons.refresh, color: AppColors.white,),
+            icon: const Icon(Icons.refresh, color: AppColors.white),
             onPressed: _loadDashboardData,
           ),
         ],
@@ -186,10 +184,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> {
               children: [
                 Text(
                   'Good $timeOfDay,',
-                  style: const TextStyle(
-                    fontSize: 14,
-                    color: AppColors.white,
-                  ),
+                  style: const TextStyle(fontSize: 14, color: AppColors.white),
                 ),
                 Text(
                   userName,
@@ -276,11 +271,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> {
               color: color.withOpacity(0.1),
               borderRadius: BorderRadius.circular(10),
             ),
-            child: Icon(
-              icon,
-              color: color,
-              size: 24,
-            ),
+            child: Icon(icon, color: color, size: 24),
           ),
           const SizedBox(height: 8),
           Text(
@@ -294,10 +285,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> {
           const SizedBox(height: 4),
           Text(
             title,
-            style: const TextStyle(
-              fontSize: 12,
-              color: AppColors.darkGrey,
-            ),
+            style: const TextStyle(fontSize: 12, color: AppColors.darkGrey),
           ),
         ],
       ),
@@ -344,25 +332,16 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> {
             ),
             child: const Column(
               children: [
-                Icon(
-                  Icons.event_note,
-                  size: 48,
-                  color: AppColors.lightGrey,
-                ),
+                Icon(Icons.event_note, size: 48, color: AppColors.lightGrey),
                 SizedBox(height: 12),
                 Text(
                   'No upcoming events',
-                  style: TextStyle(
-                    color: AppColors.darkGrey,
-                  ),
+                  style: TextStyle(color: AppColors.darkGrey),
                 ),
                 SizedBox(height: 8),
                 Text(
                   'Book an artist to see events here',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: AppColors.darkGrey,
-                  ),
+                  style: TextStyle(fontSize: 12, color: AppColors.darkGrey),
                   textAlign: TextAlign.center,
                 ),
               ],
@@ -402,11 +381,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> {
               color: AppColors.primaryColor.withOpacity(0.1),
               borderRadius: BorderRadius.circular(10),
             ),
-            child: Icon(
-              Icons.event,
-              color: AppColors.primaryColor,
-              size: 32,
-            ),
+            child: Icon(Icons.event, color: AppColors.primaryColor, size: 32),
           ),
           const SizedBox(width: 16),
           Expanded(
@@ -423,7 +398,10 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  Helpers.formatDate(booking.bookingDate, format: 'dd MMM yyyy, hh:mm a'),
+                  Helpers.formatDate(
+                    booking.bookingDate,
+                    format: 'dd MMM yyyy, hh:mm a',
+                  ),
                   style: const TextStyle(
                     fontSize: 12,
                     color: AppColors.darkGrey,
@@ -504,9 +482,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> {
                 SizedBox(height: 12),
                 Text(
                   'No artists available',
-                  style: TextStyle(
-                    color: AppColors.darkGrey,
-                  ),
+                  style: TextStyle(color: AppColors.darkGrey),
                 ),
               ],
             ),
@@ -702,9 +678,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> {
       style: ElevatedButton.styleFrom(
         backgroundColor: color.withOpacity(0.1),
         foregroundColor: color,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         elevation: 0,
         padding: const EdgeInsets.symmetric(vertical: 16),
       ),
@@ -736,27 +710,18 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> {
       showSelectedLabels: true,
       showUnselectedLabels: true,
       items: const [
-        BottomNavigationBarItem(
-          icon: Icon(Icons.home),
-          label: 'Home',
-        ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.search),
-          label: 'Search',
-        ),
+        BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
+        BottomNavigationBarItem(icon: Icon(Icons.search), label: 'Search'),
         BottomNavigationBarItem(
           icon: Icon(Icons.calendar_today),
           label: 'Bookings',
         ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.person),
-          label: 'Profile',
-        ),
+        BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
       ],
       onTap: (index) {
         switch (index) {
           case 0:
-          // Already on home
+            // Already on home
             break;
           case 1:
             Navigator.pushNamed(context, AppRoutes.searchArtists);

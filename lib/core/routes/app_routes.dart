@@ -17,6 +17,8 @@ class AppRoutes {
   static const String uploadMedia = '/upload-media';
   static const String mediaGallery = '/media-gallery';
   static const String mediaDetail = '/media-detail';
+  static const String artistMediaDetail = '/artist-media-detail';
+
   static const String artistReviews = '/artist-reviews';
   static const String viewReview = '/view-review';
   static const String artistStatistics = '/artist-statistics';
@@ -34,6 +36,8 @@ class AppRoutes {
   static const String addReview = '/add-review';
   static const String customerReviews = '/customer-reviews';
   static const String customerSettings = '/customer-settings';
+  static const String customerMediaDetail = '/customer-media-detail';
+
 
   // Common Routes
   static const String mediaComments = '/media-comments';
